@@ -518,11 +518,11 @@ class MediaManagerFilesHelper
                     $thumbName,
                     $file['base_path'] . $file['file_path']
                 ),
-                'url'  => str_replace(
+                'url'  => rtrim(MODX_BASE_URL, '/') . '/' . ltrim(str_replace(
                     [$file['name'], rtrim(MODX_BASE_PATH, '/')],
                     [$thumbName, ''],
                     $file['base_path'] . $file['file_path']
-                )
+                ), '/')
             ];
 
             if (!file_exists($thumbnail['path']) || !is_readable($thumbnail['path'])) {
