@@ -25,7 +25,7 @@ class MediaManagerCategoriesHelper
 
     public function createCategory($name, $parent = 0, $sourceId = 0, $rank = 9999)
     {
-        $name = trim($name);
+        $name = trim((string) $name);
 
         if (empty($name)) {
             return [
@@ -132,7 +132,7 @@ class MediaManagerCategoriesHelper
 
     public function sortCategories($items)
     {
-        parse_str($items, $result);
+        parse_str((string) $items, $result);
         $items = $result['items'] ?? [];
 
         $i = 1;

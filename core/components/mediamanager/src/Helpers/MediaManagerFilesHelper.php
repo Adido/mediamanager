@@ -541,6 +541,8 @@ class MediaManagerFilesHelper
 
             return $thumbnail[$type];
         }
+
+        return '';
     }
 
     /**
@@ -677,7 +679,7 @@ class MediaManagerFilesHelper
                         break;
 
                     case 'categories' :
-                        if (count($value) === 1) {
+                        if (is_array($value) && count($value) === 1) {
                             $categories = $this->mediaManager->categories->getCategories();
                             $categories = $this->mediaManager->getCategoryChildIds($categories, $value[0]);
                             $categories[] = $value[0];
@@ -1136,7 +1138,10 @@ class MediaManagerFilesHelper
                 }
 
                 /* Check if enddate is not before startdate. */
-                if (strtotime($data['license']['image_valid_startdate']) > strtotime($data['license']['image_valid_enddate'])) {
+                if (
+                    isset($data['license']['image_valid_startdate'], $data['license']['image_valid_enddate']) &&
+                    strtotime($data['license']['image_valid_startdate']) > strtotime($data['license']['image_valid_enddate'])
+                ) {
                     $this->addError('l[image_valid_enddate]', $this->mediaManager->modx->lexicon('mediamanager.error.date_comparison', [
                         'date1' => $this->mediaManager->modx->lexicon('mediamanager.files.image_valid_enddate'),
                         'date2' => $this->mediaManager->modx->lexicon('mediamanager.files.image_valid_startdate')
@@ -1476,7 +1481,10 @@ class MediaManagerFilesHelper
             }
 
             /* Check if enddate is not before startdate. */
-            if (strtotime($data['license']['image_valid_startdate']) > strtotime($data['license']['image_valid_enddate'])) {
+            if (
+                isset($data['license']['image_valid_startdate'], $data['license']['image_valid_enddate']) &&
+                strtotime($data['license']['image_valid_startdate']) > strtotime($data['license']['image_valid_enddate'])
+            ) {
                 $this->addError('license[image_valid_enddate]', $this->mediaManager->modx->lexicon('mediamanager.error.date_comparison', [
                     'date1' => $this->mediaManager->modx->lexicon('mediamanager.files.image_valid_enddate'),
                     'date2' => $this->mediaManager->modx->lexicon('mediamanager.files.image_valid_startdate')
@@ -2844,7 +2852,7 @@ class MediaManagerFilesHelper
         // Upload urls
         $this->uploadUrl             = $mediaSource['baseUrl'];
         if ($mediaSource['baseUrlRelative'] !== false) {
-            $this->uploadUrl         = $this->addTrailingSlash($this->mediaManager->modx->getOption('site_url')) . $this->removeSlashes($mediaSource['baseUrl']) . DIRECTORY_SEPARATOR;
+            $this->uploadUrl         = $this->addTrailingSlash((string) $this->mediaManager->modx->getOption('site_url')) . $this->removeSlashes($mediaSource['baseUrl']) . DIRECTORY_SEPARATOR;
         }
 
         $this->uploadUrlYear         = $year . DIRECTORY_SEPARATOR;
@@ -3199,7 +3207,7 @@ class MediaManagerFilesHelper
 
         $unit = ["B", "KB", "MB", "GB"];
         $exp  = floor(log($bytes, 1024)) | 0;
-        $size = @round($bytes / (pow(1024, $exp)), $precision);
+        $size = @round((float) $bytes / (pow(1024, $exp)), $precision);
 
         return ($size ? $size : 0) . ' ' . $unit[$exp];
     }

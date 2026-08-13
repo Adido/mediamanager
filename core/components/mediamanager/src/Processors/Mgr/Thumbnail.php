@@ -21,8 +21,8 @@ class Thumbnail extends Processor
     public function process()
     {
         /* Prevent path traversal and set all paths and filenames. */
-        $path = preg_replace('/(\.+\/)+/', '', htmlspecialchars($this->getProperty('path')));
-        $cache = preg_replace('/(\.+\/)+/', '', htmlspecialchars($this->getProperty('cache')));
+        $path = preg_replace('/(\.+\/)+/', '', htmlspecialchars((string) $this->getProperty('path')));
+        $cache = preg_replace('/(\.+\/)+/', '', htmlspecialchars((string) $this->getProperty('cache')));
         $thumbsDir = dirname($cache);
         $thumbName = $cache;
 

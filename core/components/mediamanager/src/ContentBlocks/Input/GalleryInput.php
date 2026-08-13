@@ -146,6 +146,10 @@ class GalleryInput extends cbBaseInput
      */
     public function process(cbField $field, array $data = array())
     {
+        if (! is_array($data['images'] ?? null)) {
+            $data['images'] = [];
+        }
+
         $settings = $data;
         unset($settings['images']);
 
@@ -171,12 +175,13 @@ class GalleryInput extends cbBaseInput
             // grab image sizes
             if (!isset($img['width']) || $img['width'] < 1) {
                 $size = false;
-                if (file_exists($img['url'])) {
-                    $size = getimagesize($img['url']);
+                $url  = (string) ($img['url'] ?? '');
+                if (file_exists($url)) {
+                    $size = getimagesize($url);
                 }
 
                 if (!$size) {
-                    $normalisedPath = str_replace(MODX_BASE_URL.MODX_BASE_URL, MODX_BASE_URL, MODX_BASE_PATH . $img['url']);
+                    $normalisedPath = str_replace(MODX_BASE_URL.MODX_BASE_URL, MODX_BASE_URL, MODX_BASE_PATH . $url);
                     if (file_exists($normalisedPath)) {
                         $size = getimagesize($normalisedPath);
                     }

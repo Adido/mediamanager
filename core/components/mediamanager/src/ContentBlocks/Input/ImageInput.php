@@ -53,14 +53,15 @@ class ImageInput extends cbBaseInput
     {
         if (!isset($data['width']) || $data['width'] < 1) {
             $size = false;
+            $url  = (string) ($data['url'] ?? '');
 
-            if (file_exists($data['url']) && is_readable($data['url'])) {
-                $size = getimagesize($data['url']);
+            if (file_exists($url) && is_readable($url)) {
+                $size = getimagesize($url);
             }
 
             if (!$size) {
                 // Try it with a normalised path
-                $normalisedPath = str_replace(MODX_BASE_URL.MODX_BASE_URL, MODX_BASE_URL, MODX_BASE_PATH . $data['url']);
+                $normalisedPath = str_replace(MODX_BASE_URL.MODX_BASE_URL, MODX_BASE_URL, MODX_BASE_PATH . $url);
                 if (file_exists($normalisedPath) && is_readable($normalisedPath)) {
                     $size = getimagesize($normalisedPath);
                 }

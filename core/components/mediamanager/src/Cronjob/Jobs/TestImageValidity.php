@@ -106,7 +106,7 @@ class TestImageValidity extends Job
                     }
 
                     $license = $image->getLicense();
-                    if (strtotime($license->get('image_valid_enddate')) < time()) {
+                    if (strtotime((string) $license->get('image_valid_enddate')) < time()) {
                         $expired = true;
                     }
 
