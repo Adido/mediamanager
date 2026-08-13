@@ -1822,7 +1822,7 @@ class MediaManagerFilesHelper
             $sql = "SELECT MAX(version) as highestVersionNumber FROM " . $this->mediaManager->modx->getTableName(MediamanagerFilesVersions::class) . " WHERE mediamanager_files_id = '$fileId'";
             $query = $this->mediaManager->modx->query($sql);
             if ($query) {
-                while ($row = $query->fetch(PDO::FETCH_ASSOC)) {
+                while ($row = $query->fetch(\PDO::FETCH_ASSOC)) {
                     if ($row['highestVersionNumber']) {
                         $versionNumber = ++$row['highestVersionNumber'];
                     }
@@ -2006,7 +2006,7 @@ class MediaManagerFilesHelper
         $q->prepare();
 
         $query   = $this->mediaManager->modx->query($q->toSQL());
-        $results = $query->fetchAll(PDO::FETCH_OBJ);
+        $results = $query->fetchAll(\PDO::FETCH_OBJ);
 
         // Send error message
         if (!empty($results)) {
@@ -2219,7 +2219,7 @@ class MediaManagerFilesHelper
         $q->prepare();
 
         $query   = $this->mediaManager->modx->query($q->toSQL());
-        $results = $query->fetchAll(PDO::FETCH_OBJ);
+        $results = $query->fetchAll(\PDO::FETCH_OBJ);
 
         // Send error message
         if (!empty($results)) {
