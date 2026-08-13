@@ -117,6 +117,7 @@
                             success: function(data) {
                                 $(self.$listing).html(data.results.html);
                                 $(self.$parentSelect, self.$createForm).html(data.results.select);
+                                self.sortable();
                             }
                         });
 
@@ -188,6 +189,7 @@
                             success: function(data) {
                                 $(self.$listing).html(data.results.html);
                                 $(self.$parentSelect, self.$createForm).html(data.results.select);
+                                self.sortable();
                             }
                         });
 
