@@ -645,7 +645,7 @@ class MediaManagerFilesHelper
         $where         = [];
 
         $q      = $this->mediaManager->modx->newQuery(MediamanagerFiles::class);
-        $select = $this->mediaManager->modx->getSelectColumns(MediamanagerFiles::class, MediamanagerFiles::class);
+        $select = $this->mediaManager->modx->getSelectColumns(MediamanagerFiles::class, 'MediamanagerFiles');
 
         $where[]['MediamanagerFiles.is_archived'] = $isArchive;
         $where[]['MediamanagerFiles.media_sources_id'] = $sourceId;
