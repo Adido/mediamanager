@@ -597,7 +597,7 @@ class MediaManagerFilesHelper
      *
      * @return array
      */
-    public function fileToArray(MediamanagerFiles $file = null, $source = null)
+    public function fileToArray(?MediamanagerFiles $file = null, $source = null)
     {
         if ($file === null) {
             return [];

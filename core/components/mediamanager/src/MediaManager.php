@@ -38,6 +38,7 @@ class MediaManager
     public $contexts = null;
     public $files = null;
     public $permissions = null;
+    public $sources = null;
     public $tags = null;
 
     /**

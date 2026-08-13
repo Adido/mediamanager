@@ -132,7 +132,8 @@ class MediaManagerCategoriesHelper
 
     public function sortCategories($items)
     {
-        parse_str($items);
+        parse_str($items, $result);
+        $items = $result['items'] ?? [];
 
         $i = 1;
         foreach ($items as $key => $value) {
