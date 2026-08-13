@@ -1,0 +1,78 @@
+name: Media Manager
+lowCaseName: mediamanager
+namespace: Sterc\MediaManager
+description: Media Manager for MODX.
+author: Sterc
+version: 1.0.0
+
+menus:
+  - text: mediamanager
+    description: mediamanager.desc
+    action: home
+    parent: media
+    permission: file_manager
+  - text: mediamanager.categories
+    description: mediamanager.categories.desc
+    action: categories
+    parent: media
+    permission: file_manager
+  - text: mediamanager.tags
+    description: mediamanager.tags.desc
+    action: tags
+    parent: media
+    permission: file_manager
+
+systemSettings:
+  - key: cleanup_max_age
+    value: '365'
+  - key: cleanup_time
+    value: '0'
+  - key: default_media_source
+    value: '1'
+  - key: max_file_size
+    value: 50
+    area: files
+  - key: max_file_size_images
+    value: 5
+    area: files
+
+snippets:
+  - name: getMMFilePath
+    file: getmmfilepath.snippet.php
+
+plugins:
+  - name: mediaManagerCustomTv
+    file: mediamanagercustomtv.plugin.php
+    events: [OnDocFormPrerender, OnDocFormSave, OnTVInputRenderList, OnTVOutputRenderList, OnEmptyTrash]
+  - name: mediaManagerTinyMce
+    file: mediamanagertinymce.plugin.php
+    events: [OnDocFormPrerender]
+  - name: mediaManagerModal
+    file: mediamanagermodal.plugin.php
+    events: [OnManagerPageBeforeRender]
+  - name: mediaManagerContentBlocks
+    file: mediamanagercontentblocks.plugin.php
+    events: [ContentBlocks_RegisterInputs]
+
+database:
+  tables:
+    - '\Sterc\MediaManager\Model\MediamanagerCategories'
+    - '\Sterc\MediaManager\Model\MediamanagerTags'
+    - '\Sterc\MediaManager\Model\MediamanagerFiles'
+    - '\Sterc\MediaManager\Model\MediamanagerDownloads'
+    - '\Sterc\MediaManager\Model\MediamanagerFilesCategories'
+    - '\Sterc\MediaManager\Model\MediamanagerFilesLicense'
+    - '\Sterc\MediaManager\Model\MediamanagerFilesLicenseFile'
+    - '\Sterc\MediaManager\Model\MediamanagerFilesTags'
+    - '\Sterc\MediaManager\Model\MediamanagerFilesContent'
+    - '\Sterc\MediaManager\Model\MediamanagerFilesRelations'
+    - '\Sterc\MediaManager\Model\MediamanagerFilesVersions'
+    - '\Sterc\MediaManager\Model\MediamanagerFilesMeta'
+
+build:
+  setupOptions: setup.options.php
+  scriptsAfter:
+    - resolve.policies.gpm.php
+    - resolve.categoriesdefaultmediasource.gpm.php
+    - resolve.customevents.gpm.php
+    - stercextra.gpm.php

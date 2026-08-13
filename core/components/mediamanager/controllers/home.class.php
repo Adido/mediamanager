@@ -1,66 +1,7 @@
 <?php
 
-require_once __DIR__ . '/index.class.php';
+use Sterc\MediaManager\Controllers\Home;
 
-class MediaManagerHomeManagerController extends MediaManagerManagerController
+class MediaManagerHomeManagerController extends Home
 {
-
-    private $templateFile = 'home.tpl';
-
-    public function process(array $scriptProperties = array())
-    {
-        $uploadMediaButton = '';
-        if ($this->mediaManager->permissions->upload()) {
-            $uploadMediaButton = $this->mediaManager->getChunk('files/upload_media_button', array(
-                'label' => $this->modx->lexicon('mediamanager.files.upload_media'),
-            ));
-        }
-
-        $placeholders = [
-            'pagetitle'                     => $this->modx->lexicon('mediamanager'),
-            'upload_media_button'           => $uploadMediaButton,
-            'upload_selected_files'         => $this->modx->lexicon('mediamanager.files.upload_selected_files'),
-            'search'                        => $this->modx->lexicon('mediamanager.files.search'),
-            'dropzone_maximum_upload_size'  => $this->modx->lexicon('mediamanager.files.dropzone.maximum_upload_size', [
-                'limit'                         => $this->mediaManager->config['max_file_size'] . ' MB',
-                'limit_images'                  => $this->mediaManager->config['max_file_size_images'] . ' MB'
-            ]),
-            'dropzone_button'               => $this->modx->lexicon('mediamanager.files.dropzone.button'),
-            'dropzone_title'                => $this->modx->lexicon('mediamanager.files.dropzone.title'),
-            'token'                         => $this->modx->user->getUserToken($this->modx->context->get('key')),
-            'source_list'                   => $this->mediaManager->sources->getListHtml(),
-            'sort_options'                  => $this->mediaManager->files->getSortOptionsHtml(),
-            'filter_options'                => $this->mediaManager->files->getFilterOptionsHtml(),
-            'popup'                         => $this->mediaManager->getChunk('files/popup'),
-            'dropzoneFile'                  => $this->mediaManager->getChunk('files/dropzone_file', [
-                'metaFields'                    => $this->mediaManager->sources->getMetaFieldsHtml($this->mediaSource ?: []),
-                'licensingFields'               => $this->mediaManager->sources->getLicensingFieldsHtml($this->mediaSource ?: [])
-            ])
-        ];
-
-        $placeholders['filters'] = $this->mediaManager->getChunk('files/filters', $placeholders);
-
-        if ($this->mediaManagerError) {
-            $placeholders['message'] = $this->mediaManagerError;
-            $this->templateFile = 'error.tpl';
-        }
-
-        $this->setPlaceholders(array_merge($placeholders, $this->mediaManager->config));
-    }
-
-    public function getPageTitle()
-    {
-        return $this->modx->lexicon('mediamanager');
-    }
-
-    public function getTemplateFile()
-    {
-        return $this->mediaManager->config['templates_path'] . $this->templateFile;
-    }
-
-    public function loadCustomCssJs()
-    {
-        $this->addJavascript($this->mediaManager->config['js_url'] . 'mgr/mediamanager-files-cropper.js');
-        $this->addJavascript($this->mediaManager->config['js_url'] . 'mgr/mediamanager-files.js');
-    }
 }

@@ -1,8 +1,9 @@
 <?php
+use Sterc\MediaManager\Model\MediamanagerFiles;
+use Sterc\MediaManager\Model\MediamanagerFilesContent;
+
 $corePath = $modx->getOption('mediamanager.core_path', null, $modx->getOption('core_path') . 'components/mediamanager/');
-$mediamanager = $modx->getService('mediamanager', 'MediaManager', $corePath . 'model/mediamanager/', [
-    'core_path' => $corePath
-]);
+$mediamanager = $modx->services->get('mediamanager');
 
 switch ($modx->event->name) {
     case 'OnTVInputRenderList':
@@ -18,7 +19,7 @@ switch ($modx->event->name) {
         break;
 
     case 'OnDocFormSave':
-        $modx->removeCollection('MediamanagerFilesContent', [
+        $modx->removeCollection(MediamanagerFilesContent::class, [
             'site_content_id' => $resource->get('id')
         ]);
 
@@ -58,7 +59,7 @@ switch ($modx->event->name) {
                     $doc->loadHTML($html);
 
                     foreach ($doc->getElementsByTagName('img') as $tag) {
-                        $file = $modx->getObject('MediamanagerFiles', [
+                        $file = $modx->getObject(MediamanagerFiles::class, [
                             'path:LIKE' => '%' . $tag->getAttribute('src')
                         ]);
 
@@ -103,7 +104,7 @@ switch ($modx->event->name) {
         break;
     case 'OnEmptyTrash':
         foreach ($ids as $id) {
-            $modx->removeCollection('MediamanagerFilesContent', [
+            $modx->removeCollection(MediamanagerFilesContent::class, [
                 'site_content_id' => $id
             ]);
         }

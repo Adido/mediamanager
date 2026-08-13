@@ -7,13 +7,15 @@
 require_once dirname(__DIR__, 3) . '/config.core.php';
 require_once MODX_CORE_PATH . 'config/' . MODX_CONFIG_KEY . '.inc.php';
 require_once MODX_CONNECTORS_PATH . 'index.php';
-$corePath = $modx->getOption('mediamanager.core_path', null, $modx->getOption('core_path') . 'components/mediamanager/');
-require_once $corePath . 'model/mediamanager/mediamanager.class.php';
-$modx->mediamanager = new MediaManager($modx);
-$modx->lexicon->load('mediamanager:default');
+
+if (!$modx->services->has('mediamanager')) {
+    return;
+}
+
+$mediamanager = $modx->services->get('mediamanager');
+
 /* handle request */
-$path = $modx->getOption('processorsPath', $modx->mediamanager->config, $corePath . 'processors/');
 $modx->request->handleRequest(array(
-    'processors_path' => $path,
+    'processors_path' => $mediamanager->config['processors_path'],
     'location' => ''
 ));

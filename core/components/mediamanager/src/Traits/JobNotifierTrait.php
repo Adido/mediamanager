@@ -2,8 +2,9 @@
 
 namespace Sterc\MediaManager\Traits;
 
-use modX;
-use modMail;
+use MODX\Revolution\modX;
+use MODX\Revolution\Mail\modMail;
+use MODX\Revolution\Mail\modPHPMailer;
 
 trait JobNotifierTrait
 {
@@ -106,14 +107,14 @@ trait JobNotifierTrait
    */
     public function sendNotification()
     {
-        $this->mediamanager = $this->modx->getService('mediamanager', 'MediaManager', $this->modx->getOption('mediamanager.core_path', '', MODX_CORE_PATH . '/components/mediamanager/') . 'model/mediamanager/');
+        $this->mediamanager = $this->modx->services->get('mediamanager');
 
         $message = $this->mediamanager->getChunk($this->getProperty('tpl'), [
             'expiredItems' => $this->getItemHTML($this->expiredItems),
             'notifyItems'  => $this->getItemHTML($this->notifyItems)
         ]);
 
-        $this->modx->getService('mail', 'mail.modPHPMailer');
+        $this->modx->getService('mail', modPHPMailer::class);
         $this->modx->mail->set(modMail::MAIL_BODY, $message);
         $this->modx->mail->set(modMail::MAIL_FROM, $this->modx->getOption('emailsender'));
         $this->modx->mail->set(modMail::MAIL_FROM_NAME, $this->modx->getOption('site_name'));

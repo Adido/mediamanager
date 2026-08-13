@@ -3,6 +3,8 @@
 namespace Sterc\MediaManager\Cronjob\Jobs;
 
 use Sterc\MediaManager\Cronjob\Worker;
+use MODX\Revolution\modX;
+use MODX\Revolution\Sources\modMediaSource;
 use DateInterval;
 
 class Job
@@ -36,7 +38,7 @@ class Job
     {
         $this->worker       = $worker;   
         $this->modx         = $worker->modx;
-        $this->mediamanager = $this->modx->getService('mediamanager', 'MediaManager', $this->modx->getOption('mediamanager.core_path', '', MODX_CORE_PATH . '/components/mediamanager/') . 'model/mediamanager/');
+        $this->mediamanager = $this->modx->services->get('mediamanager');
 
         $this->modx->lexicon->load('mediamanager:default');
     }
@@ -77,7 +79,7 @@ class Job
      */
     protected function setMediaSources()
     {
-        foreach ($this->modx->getIterator('sources.modMediaSource') as $source) {
+        foreach ($this->modx->getIterator(modMediaSource::class) as $source) {
             if (isset($source->getPropertyList()['mediamanagerSource']) && (int) $source->getPropertyList()['mediamanagerSource'] === 1) {
                 $this->mediaSources[] = $source;
             }

@@ -1,5 +1,9 @@
 <?php
-$mediaManager = $modx->getService('mediamanager', 'MediaManager', $modx->getOption('mediamanager.core_path', null, $modx->getOption('core_path') . 'components/mediamanager/') . 'model/mediamanager/');
+use Sterc\MediaManager\MediaManager;
+use Sterc\MediaManager\Model\MediamanagerFiles;
+use MODX\Revolution\Sources\modFileMediaSource;
+
+$mediaManager = $modx->services->get('mediamanager');
 if (!($mediaManager instanceof MediaManager)) {
     return false;
 }
@@ -9,9 +13,9 @@ if (!is_numeric($input)) {
 }
 
 $path = '';
-if ($file = $modx->getObject('MediamanagerFiles', $input)) {
+if ($file = $modx->getObject(MediamanagerFiles::class, $input)) {
     $mediaSourceId  = $file->get('media_sources_id');
-    $mediaSource    = $modx->getObject('sources.modFileMediaSource', ['id' => $mediaSourceId]);
+    $mediaSource    = $modx->getObject(modFileMediaSource::class, ['id' => $mediaSourceId]);
     $basePath       = $mediaSource->getProperties()['basePath']['value'];
     $isRelative     = $mediaSource->getProperties()['baseUrlRelative']['value'];
 
