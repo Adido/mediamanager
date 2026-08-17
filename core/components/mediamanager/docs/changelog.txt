@@ -1,5 +1,13 @@
 Changelog for MediaManager.
 
+MediaManager 3.0.0-adido
+====================================
+- Upgraded to MODX 3 (requires PHP 8.1+)
+- Rewrote build tooling for GPM 3 (_build/gpm.yml)
+- Migrated all classes to the Sterc\MediaManager namespace (PSR-4, under src/)
+- Replaced $modx->getService('mediamanager', ...) with $modx->services->get('mediamanager')
+- Added temporary class aliases for old unqualified class names (see include/deprecated.php)
+
 MediaManager 0.3.3
 ====================================
 - Add custom plugin events:

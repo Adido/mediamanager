@@ -1,8 +1,17 @@
 # Media Manager for MODX [BETA]
-![Media Manager version](https://img.shields.io/badge/version-0.3.3-brightgreen.svg)
+![Media Manager version](https://img.shields.io/badge/version-3.0.0-brightgreen.svg)
 ![MODX Extra by Sterc](https://img.shields.io/badge/extra%20by-sterc-ff69b4.svg)
 
 The Media Manager is a MODX Extra replacing the default Media Browser with an enterprise-grade media management solution, an initiative by [SEDA](https://seda.digital/) and [Sterc](https://www.sterc.com).
+
+## Requirements
+
+| MediaManager version | MODX version | PHP version |
+|---|---|---|
+| 3.x and later | MODX 3.x | PHP 8.1+ |
+| 0.3.x and earlier | MODX 2.x | PHP 7.x / 8.0 |
+
+Upgrading from MODX 2? See [UPGRADING.md](UPGRADING.md).
 
 ## Features
 - Fully responsive
