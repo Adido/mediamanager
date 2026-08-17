@@ -215,6 +215,7 @@ class MediaManager
      */
     public function saveFileContent($fileId, $resourceId, $tvId = 0)
     {
+        $object = null;
         if ((int) $tvId !== 0) {
             $object = $this->modx->getObject(MediamanagerFilesContent::class, [
                 'mediamanager_files_id' => $fileId,
