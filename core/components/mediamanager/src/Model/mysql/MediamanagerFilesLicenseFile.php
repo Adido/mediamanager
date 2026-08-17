@@ -82,7 +82,7 @@ class MediamanagerFilesLicenseFile extends \Sterc\MediaManager\Model\Mediamanage
         array (
             'File' => 
             array (
-                'class' => 'MediamanagerFiles',
+                'class' => 'Sterc\\MediaManager\\Model\\MediamanagerFiles',
                 'local' => 'mediamanager_files_id',
                 'foreign' => 'id',
                 'cardinality' => 'one',
@@ -90,7 +90,7 @@ class MediamanagerFilesLicenseFile extends \Sterc\MediaManager\Model\Mediamanage
             ),
             'License' => 
             array (
-                'class' => 'MediamanagerFilesLicense',
+                'class' => 'Sterc\\MediaManager\\Model\\MediamanagerFilesLicense',
                 'local' => 'license_id',
                 'foreign' => 'id',
                 'cardinality' => 'one',

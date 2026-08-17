@@ -247,7 +247,7 @@ class MediamanagerFilesVersions extends \Sterc\MediaManager\Model\MediamanagerFi
         array (
             'Files' => 
             array (
-                'class' => 'MediamanagerFiles',
+                'class' => 'Sterc\\MediaManager\\Model\\MediamanagerFiles',
                 'local' => 'mediamanager_files_id',
                 'foreign' => 'id',
                 'cardinality' => 'one',

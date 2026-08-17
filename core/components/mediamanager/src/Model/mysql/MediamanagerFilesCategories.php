@@ -82,7 +82,7 @@ class MediamanagerFilesCategories extends \Sterc\MediaManager\Model\Mediamanager
         array (
             'Files' => 
             array (
-                'class' => 'MediamanagerFiles',
+                'class' => 'Sterc\\MediaManager\\Model\\MediamanagerFiles',
                 'local' => 'mediamanager_files_id',
                 'foreign' => 'id',
                 'cardinality' => 'one',
@@ -90,7 +90,7 @@ class MediamanagerFilesCategories extends \Sterc\MediaManager\Model\Mediamanager
             ),
             'Categories' => 
             array (
-                'class' => 'MediamanagerCategories',
+                'class' => 'Sterc\\MediaManager\\Model\\MediamanagerCategories',
                 'local' => 'mediamanager_categories_id',
                 'foreign' => 'id',
                 'cardinality' => 'one',

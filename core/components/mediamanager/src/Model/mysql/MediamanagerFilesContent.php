@@ -134,7 +134,7 @@ class MediamanagerFilesContent extends \Sterc\MediaManager\Model\MediamanagerFil
         array (
             'Files' => 
             array (
-                'class' => 'MediamanagerFiles',
+                'class' => 'Sterc\\MediaManager\\Model\\MediamanagerFiles',
                 'local' => 'mediamanager_files_id',
                 'foreign' => 'id',
                 'cardinality' => 'one',

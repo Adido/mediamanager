@@ -334,7 +334,7 @@ class MediamanagerFiles extends \Sterc\MediaManager\Model\MediamanagerFiles
         array (
             'FileLicense' => 
             array (
-                'class' => 'MediamanagerFilesLicenseFile',
+                'class' => 'Sterc\\MediaManager\\Model\\MediamanagerFilesLicenseFile',
                 'local' => 'id',
                 'foreign' => 'mediamanager_files_id',
                 'cardinality' => 'one',
@@ -342,7 +342,7 @@ class MediamanagerFiles extends \Sterc\MediaManager\Model\MediamanagerFiles
             ),
             'Categories' => 
             array (
-                'class' => 'MediamanagerFilesCategories',
+                'class' => 'Sterc\\MediaManager\\Model\\MediamanagerFilesCategories',
                 'local' => 'id',
                 'foreign' => 'mediamanager_files_id',
                 'cardinality' => 'many',
@@ -350,7 +350,7 @@ class MediamanagerFiles extends \Sterc\MediaManager\Model\MediamanagerFiles
             ),
             'Tags' => 
             array (
-                'class' => 'MediamanagerFilesTags',
+                'class' => 'Sterc\\MediaManager\\Model\\MediamanagerFilesTags',
                 'local' => 'id',
                 'foreign' => 'mediamanager_files_id',
                 'cardinality' => 'many',
@@ -358,7 +358,7 @@ class MediamanagerFiles extends \Sterc\MediaManager\Model\MediamanagerFiles
             ),
             'Content' => 
             array (
-                'class' => 'MediamanagerFilesContent',
+                'class' => 'Sterc\\MediaManager\\Model\\MediamanagerFilesContent',
                 'local' => 'id',
                 'foreign' => 'mediamanager_files_id',
                 'cardinality' => 'many',
@@ -366,7 +366,7 @@ class MediamanagerFiles extends \Sterc\MediaManager\Model\MediamanagerFiles
             ),
             'Relations' => 
             array (
-                'class' => 'MediamanagerFilesRelations',
+                'class' => 'Sterc\\MediaManager\\Model\\MediamanagerFilesRelations',
                 'local' => 'id',
                 'foreign' => 'mediamanager_files_id',
                 'cardinality' => 'many',
@@ -374,7 +374,7 @@ class MediamanagerFiles extends \Sterc\MediaManager\Model\MediamanagerFiles
             ),
             'Relations2' => 
             array (
-                'class' => 'MediamanagerFilesRelations',
+                'class' => 'Sterc\\MediaManager\\Model\\MediamanagerFilesRelations',
                 'local' => 'id',
                 'foreign' => 'mediamanager_files_id_relation',
                 'cardinality' => 'many',
@@ -393,7 +393,7 @@ class MediamanagerFiles extends \Sterc\MediaManager\Model\MediamanagerFiles
             ),
             'Meta' => 
             array (
-                'class' => 'MediamanagerFilesMeta',
+                'class' => 'Sterc\\MediaManager\\Model\\MediamanagerFilesMeta',
                 'local' => 'id',
                 'foreign' => 'mediamanager_files_id',
                 'cardinality' => 'many',

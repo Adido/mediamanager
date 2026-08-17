@@ -82,7 +82,7 @@ class MediamanagerFilesRelations extends \Sterc\MediaManager\Model\MediamanagerF
         array (
             'Files' => 
             array (
-                'class' => 'MediamanagerFiles',
+                'class' => 'Sterc\\MediaManager\\Model\\MediamanagerFiles',
                 'local' => 'mediamanager_files_id',
                 'foreign' => 'id',
                 'cardinality' => 'one',
@@ -90,7 +90,7 @@ class MediamanagerFilesRelations extends \Sterc\MediaManager\Model\MediamanagerF
             ),
             'Files2' => 
             array (
-                'class' => 'MediamanagerFiles',
+                'class' => 'Sterc\\MediaManager\\Model\\MediamanagerFiles',
                 'local' => 'mediamanager_files_id_relation',
                 'foreign' => 'id',
                 'cardinality' => 'one',

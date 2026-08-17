@@ -72,7 +72,7 @@ class MediamanagerFilesMeta extends \Sterc\MediaManager\Model\MediamanagerFilesM
         array (
             'Files' => 
             array (
-                'class' => 'MediamanagerFiles',
+                'class' => 'Sterc\\MediaManager\\Model\\MediamanagerFiles',
                 'local' => 'mediamanager_files_id',
                 'foreign' => 'id',
                 'cardinality' => 'one',
