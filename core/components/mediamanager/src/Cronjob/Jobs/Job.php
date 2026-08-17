@@ -94,6 +94,8 @@ class Job
      */
     protected function makeManagerUrl(array $params)
     {
-        return rtrim(MODX_SITE_URL, '/') . '/' . trim(MODX_MANAGER_URL, '/') . '?' . http_build_query($params);
+        $managerUrl = $this->modx->getOption('url_scheme') . $this->modx->getOption('http_host') . $this->modx->getOption('manager_url', null, MODX_MANAGER_URL);
+
+        return htmlspecialchars(rtrim($managerUrl, '/') . '?' . http_build_query($params));
     }
 }
