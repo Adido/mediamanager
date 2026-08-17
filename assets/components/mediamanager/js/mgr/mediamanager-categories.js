@@ -90,7 +90,8 @@
 
         edit : function(e) {
             var self = this,
-                form  = $(self.$createForm).clone();
+                form  = $(self.$createForm).clone(),
+                dialog;
 
             form.find('button').remove();
             form.find('[name="source"]').parents('.form-group').remove();
@@ -101,7 +102,24 @@
 
             form.append($('<input />', {name: 'category_id', type: 'hidden', value: e.target.dataset.editCategory}));
 
-            $('<div />').html(e.target.dataset.editMessage).append(form).dialog({
+            form.on('submit', function(e) {
+                e.preventDefault();
+
+                $.ajax ({
+                    type: 'POST',
+                    url: $(self.$createForm).attr('action'),
+                    data: $(form).serializeArray(),
+                    success: function(data) {
+                        $(self.$listing).html(data.results.html);
+                        $(self.$parentSelect, self.$createForm).html(data.results.select);
+                        self.sortable();
+                    }
+                });
+
+                dialog.dialog('close');
+            });
+
+            dialog = $('<div />').html(e.target.dataset.editMessage).append(form).dialog({
                 draggable: false,
                 resizable: false,
                 modal: true,
@@ -109,19 +127,8 @@
                 buttons : [{
                     text: e.target.dataset.editConfirm,
                     class: 'btn btn-success',
-                    click: function () {
-                        $.ajax ({
-                            type: 'POST',
-                            url: $(self.$createForm).attr('action'),
-                            data: $(form).serializeArray(),
-                            success: function(data) {
-                                $(self.$listing).html(data.results.html);
-                                $(self.$parentSelect, self.$createForm).html(data.results.select);
-                                self.sortable();
-                            }
-                        });
-
-                        $(this).dialog('close');
+                    click: function() {
+                        form.trigger('submit');
                     }
                 }, {
                     text: e.target.dataset.editCancel,
