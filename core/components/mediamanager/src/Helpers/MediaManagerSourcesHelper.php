@@ -311,7 +311,7 @@ class MediaManagerSourcesHelper
 
         $properties = $source->get('properties');
 
-        if (!$properties['mediamanagerSource']['value']) {
+        if (!(isset($properties['mediamanagerSource']['value']) && $properties['mediamanagerSource']['value'])) {
             return false;
         }
 
