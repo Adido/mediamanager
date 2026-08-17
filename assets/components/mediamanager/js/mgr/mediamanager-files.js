@@ -583,6 +583,9 @@ $.fn.modal.Constructor.prototype.enforceFocus = function () {};
         setPopup: function() {
             var self = this;
 
+            // Prevent overlay issue with MODX 3's content stacking
+            $(self.$filePopup).appendTo(document.body);
+
             $(self.$filePopup).modal({
                 show: false,
                 keyboard: false,

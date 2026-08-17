@@ -5,7 +5,7 @@ namespace Sterc\MediaManager\Cronjob\Jobs;
 use Sterc\MediaManager\Traits\JobNotifierTrait;
 use DateTime;
 use DateTimeZone;
-use modMediaSource;
+use MODX\Revolution\Sources\modMediaSource;
 
 class TestImageSourceValidity extends Job
 {

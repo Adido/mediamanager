@@ -5,6 +5,10 @@
  * @package mediamanager
  * @subpackage build
  */
+
+use MODX\Revolution\modSystemSetting;
+use xPDO\Transport\xPDOTransport;
+
 $package = 'mediamanager';
 
 $settings = array(
@@ -24,7 +28,7 @@ switch ($options[xPDOTransport::PACKAGE_ACTION]) {
     case xPDOTransport::ACTION_UPGRADE:
         foreach ($settings as $key => $setting) {
             $settingObject = $modx->getObject(
-                'modSystemSetting',
+                modSystemSetting::class,
                 array('key' => strtolower($package) . '.' . $setting['key'])
             );
             if ($settingObject) {

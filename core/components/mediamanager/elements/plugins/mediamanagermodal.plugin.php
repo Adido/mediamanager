@@ -1,8 +1,5 @@
 <?php
-$corePath     = $modx->getOption('mediamanager.core_path', null, $modx->getOption('core_path') . 'components/mediamanager/');
-$mediamanager = $modx->getService('mediamanager', 'MediaManager', $corePath . 'model/mediamanager/', array(
-    'core_path' => $corePath
-));
+$mediamanager = $modx->services->get('mediamanager');
 
 switch ($modx->event->name) {
     case 'OnManagerPageBeforeRender':

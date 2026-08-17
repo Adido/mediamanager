@@ -2,7 +2,7 @@
 
 namespace Sterc\MediaManager\Cronjob;
 
-use modX;
+use MODX\Revolution\modX;
 
 class Worker
 {

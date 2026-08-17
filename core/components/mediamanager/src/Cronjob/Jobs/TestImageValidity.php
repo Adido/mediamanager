@@ -3,9 +3,13 @@
 namespace Sterc\MediaManager\Cronjob\Jobs;
 
 use Sterc\MediaManager\Traits\JobNotifierTrait;
+use Sterc\MediaManager\Model\MediamanagerFiles;
+use Sterc\MediaManager\Model\MediamanagerFilesContent;
+use Sterc\MediaManager\Model\MediamanagerFilesLicense;
+use Sterc\MediaManager\Model\MediamanagerFilesLicenseFile;
 use DateTime;
 use DateTimeZone;
-use xPDOQuery;
+use xPDO\Om\xPDOQuery;
 
 class TestImageValidity extends Job
 {
@@ -35,9 +39,9 @@ class TestImageValidity extends Job
                  * Collect expired or about to expire images.
                  * Images are also marked as expired even if the image itself is not expired, but the attached source is.
                  */
-                $query = $this->modx->newQuery('MediamanagerFiles');
-                $query->rightJoin('MediamanagerFilesLicenseFile', 'MediamanagerFilesLicenseFile', 'MediamanagerFilesLicenseFile.mediamanager_files_id = MediamanagerFiles.id');
-                $query->leftJoin('MediamanagerFilesLicense', 'MediamanagerFilesLicense', 'MediamanagerFilesLicenseFile.license_id = MediamanagerFilesLicense.id');
+                $query = $this->modx->newQuery(MediamanagerFiles::class);
+                $query->rightJoin(MediamanagerFilesLicenseFile::class, 'MediamanagerFilesLicenseFile', 'MediamanagerFilesLicenseFile.mediamanager_files_id = MediamanagerFiles.id');
+                $query->leftJoin(MediamanagerFilesLicense::class, 'MediamanagerFilesLicense', 'MediamanagerFilesLicenseFile.license_id = MediamanagerFilesLicense.id');
 
                 $frequencyDates = [];
                 foreach ($frequencies as $frequency) {
@@ -65,7 +69,7 @@ class TestImageValidity extends Job
                     'is_archived'      => false
                 ]);
 
-                foreach ($this->modx->getIterator('MediamanagerFiles', $query) as $image) {
+                foreach ($this->modx->getIterator(MediamanagerFiles::class, $query) as $image) {
                     $expired         = false;
                     $expiredBySource = false;
                     $messages        = [];
@@ -73,8 +77,8 @@ class TestImageValidity extends Job
 
                     $query = $this->modx->newQuery('modResource');
                     $query->select(['modResource.*', '`modContext`.`name` as context_name']);
-                    $query->leftJoin('MediamanagerFilesContent', 'MediamanagerFilesContent', '`MediamanagerFilesContent`.`site_content_id` = `modResource`.`id`');
-                    $query->leftJoin('MediamanagerFiles', 'MediamanagerFiles', '`MediamanagerFiles`.`id` = `MediamanagerFilesContent`.`mediamanager_files_id`');
+                    $query->leftJoin(MediamanagerFilesContent::class, 'MediamanagerFilesContent', '`MediamanagerFilesContent`.`site_content_id` = `modResource`.`id`');
+                    $query->leftJoin(MediamanagerFiles::class, 'MediamanagerFiles', '`MediamanagerFiles`.`id` = `MediamanagerFilesContent`.`mediamanager_files_id`');
                     $query->leftJoin('modContext', 'modContext', '`modResource`.`context_key` = `modContext`.`key`');
 
                     $query->where(['MediamanagerFiles.id' => $image->get('id')]);
@@ -102,7 +106,7 @@ class TestImageValidity extends Job
                     }
 
                     $license = $image->getLicense();
-                    if (strtotime($license->get('image_valid_enddate')) < time()) {
+                    if (strtotime((string) $license->get('image_valid_enddate')) < time()) {
                         $expired = true;
                     }
 

@@ -7,14 +7,14 @@ namespace Composer\Autoload;
 class ComposerStaticInit91c45cca13da1d765a99b9bd264a3adf
 {
     public static $prefixLengthsPsr4 = array (
-        'S' => 
+        'S' =>
         array (
             'Sterc\\MediaManager\\' => 19,
         ),
     );
 
     public static $prefixDirsPsr4 = array (
-        'Sterc\\MediaManager\\' => 
+        'Sterc\\MediaManager\\' =>
         array (
             0 => __DIR__ . '/../..' . '/src',
         ),
