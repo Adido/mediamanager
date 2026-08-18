@@ -70,9 +70,7 @@ database:
     - '\Sterc\MediaManager\Model\MediamanagerFilesMeta'
 
 build:
-  setupOptions: setup.options.php
   scriptsAfter:
     - resolve.policies.gpm.php
     - resolve.categoriesdefaultmediasource.gpm.php
     - resolve.customevents.gpm.php
-    - stercextra.gpm.php
