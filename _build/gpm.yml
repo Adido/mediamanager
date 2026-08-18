@@ -70,6 +70,9 @@ database:
     - '\Sterc\MediaManager\Model\MediamanagerFilesMeta'
 
 build:
+  readme: core/components/mediamanager/docs/readme.txt
+  license: core/components/mediamanager/docs/license.txt
+  changelog: core/components/mediamanager/docs/changelog.txt
   scriptsAfter:
     - resolve.policies.gpm.php
     - resolve.categoriesdefaultmediasource.gpm.php
