@@ -1,5 +1,9 @@
 Changelog for MediaManager.
 
+MediaManager 3.0.1-adido
+====================================
+- Updated build docs
+
 MediaManager 3.0.0-adido
 ====================================
 - Upgraded to MODX 3 (requires PHP 8.1+)

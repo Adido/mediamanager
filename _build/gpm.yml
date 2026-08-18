@@ -3,7 +3,7 @@ lowCaseName: mediamanager
 namespace: Sterc\MediaManager
 description: Media Manager for MODX.
 author: Sterc
-version: 3.0.0-adido
+version: 3.0.1-adido
 
 menus:
   - text: mediamanager
