@@ -1,10 +1,10 @@
 <div id="tv-image-{$tv->id}"></div>
 <div id="tv-image-preview-{$tv->id}" class="modx-tv-image-preview">
-    {if $tv->value}
+    {if $tv->value && $preview}
         {if $path|substr:-3 == "svg"}
-            <img src="/{$path}" width="150" />
+            <img src="{$preview}" width="150" />
         {else}
-            <img src="{$_config.connectors_url}system/phpthumb.php?w=400&src={$path}" />
+            <img src="{$preview}" />
         {/if}
     {/if}
 </div>

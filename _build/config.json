@@ -64,6 +64,14 @@
             "key": "max_file_size_images",
             "value": 5,
             "area": "files"
+        }, {
+            "key": "cache_path",
+            "value": "",
+            "area": "files"
+        }, {
+            "key": "cache_url",
+            "value": "",
+            "area": "files"
         }]
     },
     "database": {

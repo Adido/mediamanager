@@ -7,14 +7,14 @@ namespace Composer\Autoload;
 class ComposerStaticInit91c45cca13da1d765a99b9bd264a3adf
 {
     public static $prefixLengthsPsr4 = array (
-        'S' => 
+        'S' =>
         array (
             'Sterc\\MediaManager\\' => 19,
         ),
     );
 
     public static $prefixDirsPsr4 = array (
-        'Sterc\\MediaManager\\' => 
+        'Sterc\\MediaManager\\' =>
         array (
             0 => __DIR__ . '/../..' . '/src',
         ),
@@ -22,6 +22,16 @@ class ComposerStaticInit91c45cca13da1d765a99b9bd264a3adf
 
     public static $classMap = array (
         'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
+        'Sterc\\MediaManager\\Cronjob\\Jobs\\Job' => __DIR__ . '/../..' . '/src/Cronjob/Jobs/Job.php',
+        'Sterc\\MediaManager\\Cronjob\\Jobs\\TestImageSourceValidity' => __DIR__ . '/../..' . '/src/Cronjob/Jobs/TestImageSourceValidity.php',
+        'Sterc\\MediaManager\\Cronjob\\Jobs\\TestImageValidity' => __DIR__ . '/../..' . '/src/Cronjob/Jobs/TestImageValidity.php',
+        'Sterc\\MediaManager\\Cronjob\\Worker' => __DIR__ . '/../..' . '/src/Cronjob/Worker.php',
+        'Sterc\\MediaManager\\Storage\\LocalStorage' => __DIR__ . '/../..' . '/src/Storage/LocalStorage.php',
+        'Sterc\\MediaManager\\Storage\\S3Storage' => __DIR__ . '/../..' . '/src/Storage/S3Storage.php',
+        'Sterc\\MediaManager\\Storage\\Storage' => __DIR__ . '/../..' . '/src/Storage/Storage.php',
+        'Sterc\\MediaManager\\Storage\\StorageFactory' => __DIR__ . '/../..' . '/src/Storage/StorageFactory.php',
+        'Sterc\\MediaManager\\Traits\\ErrorTrait' => __DIR__ . '/../..' . '/src/Traits/ErrorTrait.php',
+        'Sterc\\MediaManager\\Traits\\JobNotifierTrait' => __DIR__ . '/../..' . '/src/Traits/JobNotifierTrait.php',
     );
 
     public static function getInitializer(ClassLoader $loader)

@@ -31,41 +31,36 @@ class MediaManagerFilesHelper
     private $mediaManager = null;
 
     /**
-     * Upload urls.
+     * Storage of the media source being worked on.
+     *
+     * @var \Sterc\MediaManager\Storage\Storage|null
      */
-    private $uploadUrl = null;
-    private $uploadUrlYear = null;
-    private $uploadUrlMonth = null;
+    private $storage = null;
 
     /**
-     * Upload paths.
+     * Upload paths, relative to the storage root.
      */
-    private $uploadDirectory = null;
     private $uploadDirectoryYear = null;
     private $uploadDirectoryMonth = null;
 
     /**
-     * Archive paths.
+     * Archive path.
      */
-    private $archiveUrl = null;
     private $archiveDirectory = null;
 
     /**
-     * Download paths.
+     * Download path, relative to the local cache root.
      */
-    private $downloadUrl = null;
     private $downloadDirectory = null;
 
     /**
-     * Version paths.
+     * Version path.
      */
-    private $versionUrl = null;
     private $versionDirectory = null;
 
     /**
-     * License paths.
+     * License path.
      */
-    private $licenseUrl;
     private $licenseDirectory;
 
     /**
@@ -214,7 +209,7 @@ class MediaManagerFilesHelper
 
         $data                     = $this->getFile($fileId);
         $file                     = $this->fileToArray($data['file']);
-        $file['path']             = $this->addTrailingSlash($this->mediaManager->modx->getOption('site_url')) . $this->removeSlashes($file['path']);
+        $file['path']             = $this->absoluteUrl($file['path']);
         $file['uploaded_by_name'] = ($data['user'] !== null ? $data['user']->get('fullname') : $this->mediaManager->modx->lexicon('mediamanager.files.file_unknown_user'));
         $bodyData['file']         = $file;
         $footerData['file']       = $file;
@@ -224,8 +219,7 @@ class MediaManagerFilesHelper
             $bodyData['preview']  = sprintf('<img src="%s" />', $this->getThumbnail($file, 'url'));
             $bodyData['is_image'] = 1;
         } elseif ($file['file_type'] === 'pdf' && extension_loaded('Imagick') &&
-            ($thumb = str_replace('.pdf', '_thumb.jpg', $file['path'])) &&
-            file_exists(rtrim(MODX_BASE_PATH, '/') . $thumb)
+            ($thumb = $this->getPdfPreview($file, 'url'))
         ) {
             $bodyData['preview']          = '<img src="' . $thumb . '" />';
             $bodyData['is_image']         = 0;
@@ -342,7 +336,7 @@ class MediaManagerFilesHelper
 
         $versions = $this->mediaManager->modx->getIterator('MediamanagerFilesVersions', $v);
 
-        $this->setUploadPaths();
+        $storage             = $this->mediaManager->sources->getStorage($file['media_sources_id']);
         $bodyData['history'] = '';
         foreach ($versions as $version) {
             $versionArr = $version->toArray();
@@ -363,7 +357,7 @@ class MediaManagerFilesHelper
             $versionArr['type']             = strtolower($fileInformation['extension']);
             $versionArr['file_size']        = $this->formatFileSize($versionArr['file_size']);
             $versionArr['active_version']   = $file['version'];
-            $versionArr['path']             = $this->uploadUrl . $versionArr['path'];
+            $versionArr['path']             = $storage ? $this->absoluteUrl($storage->privateUrl($versionArr['path'])) : '';
 
             $versionArr['replaceHtml'] = '';
             if ($versionArr['action'] == 'replace') {
@@ -435,7 +429,7 @@ class MediaManagerFilesHelper
         if ($licenseInfo = $data['file']->getLicense()) {
             foreach ($licenseInfo->toArray() as $key => $value) {
                 if ($key === 'license_path' && !empty($value)) {
-                    $value = $this->uploadUrl . $this->licenseDirectory . $value;
+                    $value = $storage ? $this->absoluteUrl($storage->privateUrl(self::LICENSE_DIRECTORY . '/' . $value)) : '';
                 } elseif ($key === 'image_source') {
                     if (!empty($sourceArray['licensing_sources'])) {
                         foreach ($sourceArray['licensing_sources'] as $source) {
@@ -492,23 +486,19 @@ class MediaManagerFilesHelper
     public function getThumbnail($file, $type = 'path', $hash = '')
     {
         if ($this->isImage($file['file_type'])) {
+            $storage = $this->mediaManager->sources->getStorage($file['media_sources_id']);
+            if (!$storage) {
+                return '';
+            }
+
             if (empty($hash)) {
                 $hash = $file['file_hash'];
             }
 
-            $thumbName = 'thumbs' . DIRECTORY_SEPARATOR . $hash . '.' . $file['file_type'];
-
+            $thumbKey  = $this->thumbnailKey($file['file_path'], $hash, $file['file_type']);
             $thumbnail = [
-                'path' => str_replace(
-                    $file['name'],
-                    $thumbName,
-                    $file['base_path'] . $file['file_path']
-                ),
-                'url'  => str_replace(
-                    [$file['name'], rtrim(MODX_BASE_PATH, '/')],
-                    [$thumbName, ''],
-                    $file['base_path'] . $file['file_path']
-                )
+                'path' => $storage->cachePath($thumbKey),
+                'url'  => $storage->cacheUrl($thumbKey)
             ];
 
             if (!file_exists($thumbnail['path']) || !is_readable($thumbnail['path'])) {
@@ -517,8 +507,7 @@ class MediaManagerFilesHelper
                     'HTTP_MODAUTH' => $this->mediaManager->modx->user->getUserToken(
                         $this->mediaManager->modx->context->get('key')
                     ),
-                    'path' => $file['base_path'] . $file['file_path'],
-                    'cache' => $thumbnail['path'],
+                    'id' => $file['id']
                 ];
 
                 $thumbnail['url'] = $this->mediaManager->config['connector_url'] . '?' .
@@ -530,60 +519,211 @@ class MediaManagerFilesHelper
     }
 
     /**
-     * Get file path.
+     * Get the local path or url of a PDF preview, if one was created.
      *
      * @param array $file
-     * @param null|array $source
-     * @param string $type Can be path or archive_path
+     * @param string $type Can be path or url
      *
      * @return string
      */
-    public function filePath($file, $source = null, $type = 'path')
+    public function getPdfPreview($file, $type = 'url')
     {
-        if (!$source) {
-            $source = $this->mediaManager->sources->getSource($file['media_sources_id']);
+        $storage = $this->mediaManager->sources->getStorage($file['media_sources_id']);
+        if (!$storage) {
+            return '';
         }
 
-        $filePath = $source['basePath'];
-        if ($source['basePathRelative'] !== false) {
-            $filePath = $this->addTrailingSlash(MODX_BASE_PATH) . $this->removeSlashes($source['basePath']) . DIRECTORY_SEPARATOR;
+        $previewKey = str_replace('.pdf', '_thumb.jpg', $file['file_path']);
+
+        if (!is_readable($storage->cachePath($previewKey))) {
+            return '';
         }
 
-        return $filePath . $file[$type];
+        return $type === 'path' ? $storage->cachePath($previewKey) : $storage->cacheUrl($previewKey);
+    }
+
+    /**
+     * Get the local path of an image's thumbnail, creating it from the stored
+     * file when it is missing.
+     *
+     * @param array $file
+     *
+     * @return string|false
+     */
+    public function ensureThumbnail($file)
+    {
+        $thumbPath = $this->getThumbnail($file, 'path');
+        $storage   = $this->mediaManager->sources->getStorage($file['media_sources_id']);
+
+        if (empty($thumbPath) || !$storage) {
+            return false;
+        }
+
+        if (is_readable($thumbPath)) {
+            return $thumbPath;
+        }
+
+        $localPath = $storage->localCopy($file['is_archived'] ? $file['archive_path'] : $file['file_path']);
+        $created   = $localPath !== false && $this->createThumbnail($localPath, $thumbPath);
+
+        $storage->releaseLocalCopy($localPath);
+
+        return $created ? $thumbPath : false;
+    }
+
+    /**
+     * Create a thumbnail with phpThumb.
+     *
+     * @param string $sourcePath Local path of the original image.
+     * @param string $thumbPath Local path to write the thumbnail to.
+     *
+     * @return bool
+     */
+    private function createThumbnail($sourcePath, $thumbPath)
+    {
+        $modx = $this->mediaManager->modx;
+
+        if (!$modx->loadClass('modPhpThumb', $modx->getOption('core_path') . 'model/phpthumb/', true, true)) {
+            $modx->log(modX::LOG_LEVEL_ERROR, '[MediaManager] Could not load modPhpThumb class.');
+            return false;
+        }
+
+        if (!$this->createLocalDirectory(dirname($thumbPath))) {
+            return false;
+        }
+
+        $phpThumb = new modPhpThumb($modx);
+        $phpThumb->initialize();
+        $phpThumb->setParameter('h', 180);
+        $phpThumb->setParameter('w', 230);
+        $phpThumb->setParameter('q', 80);
+        $phpThumb->setParameter('far', 1);
+        $phpThumb->setParameter('config_allow_src_above_docroot', true);
+        $phpThumb->set($sourcePath);
+
+        if (!$phpThumb->GenerateThumbnail() || !$phpThumb->RenderToFile($thumbPath)) {
+            $modx->log(modX::LOG_LEVEL_ERROR, '[MediaManager] Could not create thumbnail ' . $thumbPath);
+            return false;
+        }
+
+        chmod($thumbPath, 0644);
+
+        return true;
+    }
+
+    /**
+     * Create the thumbnail or PDF preview for a stored file, from a local copy.
+     *
+     * @param string $localPath Local path of the file.
+     * @param string $fileKey Storage key of the file.
+     * @param string $fileType
+     * @param string $hash
+     */
+    private function createPreviews($localPath, $fileKey, $fileType, $hash)
+    {
+        if ($this->isImage($fileType)) {
+            $this->createThumbnail($localPath, $this->storage->cachePath($this->thumbnailKey($fileKey, $hash, $fileType)));
+        } elseif ($fileType === 'pdf' && extension_loaded('Imagick')) {
+            $previewPath = $this->storage->cachePath(str_replace('.pdf', '_thumb.jpg', $fileKey));
+
+            if ($this->createLocalDirectory(dirname($previewPath))) {
+                try {
+                    $pdfPreview = new Imagick();
+                    $pdfPreview->setResolution(230, 180);
+                    $pdfPreview->readImage($localPath . '[0]');
+                    $pdfPreview->setIteratorIndex(0);
+                    $pdfPreview->setImageFormat('jpeg');
+                    $pdfPreview->writeImage($previewPath);
+                    $pdfPreview->clear();
+                    $pdfPreview->destroy();
+                } catch (ImagickException $exception) {
+                    $this->mediaManager->modx->log(modX::LOG_LEVEL_ERROR, '[MediaManager] Could not create PDF preview ' . $previewPath . ': ' . $exception->getMessage());
+                }
+            }
+        }
+    }
+
+    /**
+     * Thumbnail key, relative to the cache root.
+     *
+     * @param string $fileKey Storage key of the file.
+     * @param string $hash
+     * @param string $fileType
+     *
+     * @return string
+     */
+    private function thumbnailKey($fileKey, $hash, $fileType)
+    {
+        $directory = dirname($fileKey);
+
+        return ($directory === '.' ? '' : $directory . '/') . 'thumbs/' . $hash . '.' . $fileType;
+    }
+
+    /**
+     * Get image dimensions from a local file.
+     *
+     * @param string $localPath
+     * @param string $extension
+     *
+     * @return string Dimensions as WIDTHxHEIGHT, or empty when not an image.
+     */
+    private function getImageDimensions($localPath, $extension)
+    {
+        if ($this->isImage($extension) && ($image = getimagesize($localPath))) {
+            return $image[0] . 'x' . $image[1];
+        }
+
+        return '';
     }
 
     /**
      * Get file url.
      *
      * @param array $file
-     * @param null|object $source
      * @param string $type Can be path or archive_path
      *
      * @return string
      */
-    public function fileUrl($file, $source = null, $type = 'path')
+    public function fileUrl($file, $type = 'path')
     {
-        if (!$source) {
-            $source = $this->mediaManager->sources->getSource($file['media_sources_id']);
+        $storage = $this->mediaManager->sources->getStorage($file['media_sources_id']);
+        if (!$storage) {
+            return '';
         }
 
-        $filePath = $source['baseUrl'];
-        if ($source['baseUrlRelative'] !== false) {
-            $filePath = DIRECTORY_SEPARATOR . $this->removeSlashes($source['baseUrl']) . DIRECTORY_SEPARATOR;
+        return $storage->url($file[$type]);
+    }
+
+    /**
+     * Make a root-relative url absolute, using the site url's scheme and host.
+     *
+     * @param string $url
+     *
+     * @return string
+     */
+    public function absoluteUrl($url)
+    {
+        if ($url === '' || preg_match('#^([a-z0-9]+:)?//#i', $url)) {
+            return $url;
         }
 
-        return $filePath . $file[$type];
+        $siteUrl = $this->mediaManager->modx->getOption('site_url');
+
+        if (strpos($url, '/') === 0 && ($parts = parse_url($siteUrl)) && isset($parts['scheme'], $parts['host'])) {
+            return $parts['scheme'] . '://' . $parts['host'] . (isset($parts['port']) ? ':' . $parts['port'] : '') . $url;
+        }
+
+        return $this->addTrailingSlash($siteUrl) . ltrim($url, '/');
     }
 
     /**
      * Return array from file row
      *
      * @param object $file
-     * @param null|object $source
      *
      * @return array
      */
-    public function fileToArray(MediamanagerFiles $file = null, $source = null)
+    public function fileToArray(MediamanagerFiles $file = null)
     {
         if ($file === null) {
             return [];
@@ -591,22 +731,11 @@ class MediaManagerFilesHelper
 
         $file = $file->toArray();
 
-        if ($source === null) {
-            $source = $this->mediaManager->sources->getSource($file['media_sources_id']);
-        }
-
         $file['categories']  = [];
         $file['file_size']   = $this->formatFileSize($file['file_size']);
         $file['file_path']   = $file['path'];
         $file['is_archived'] = (int) $file['is_archived'];
-        $file['path']        = $this->fileUrl($file, $source);
-        $file['base_path']   = $source['basePath'];
-
-        if ($source['basePathRelative'] !== false) {
-            $file['base_path'] = $this->addTrailingSlash(MODX_BASE_PATH) .
-                $this->removeSlashes($source['basePath']) .
-                DIRECTORY_SEPARATOR;
-        }
+        $file['path']        = $this->fileUrl($file);
 
         return $file;
     }
@@ -789,8 +918,7 @@ class MediaManagerFilesHelper
                     $file['preview_path'] = $this->getThumbnail($file, 'url');
                     $file['preview'] = $this->mediaManager->getChunk('files/file_preview_img', $file);
                 } elseif ($imagickLoaded && $file['file_type'] === 'pdf' &&
-                    ($thumb = str_replace('.pdf', '_thumb.jpg', $file['path'])) &&
-                    file_exists(rtrim(MODX_BASE_PATH, '/') . $thumb)
+                    ($thumb = $this->getPdfPreview($file, 'url'))
                 ) {
                     $file['preview_path'] = $thumb;
                     $file['preview']      = $this->mediaManager->getChunk('files/file_preview_img', $file);
@@ -1178,10 +1306,22 @@ class MediaManagerFilesHelper
 
         // Add unique id to file name if needed
         $fileInformation = pathinfo($file['name']);
-        $fileName = $this->createUniqueFile($this->uploadDirectory . $this->uploadDirectoryMonth, $this->sanitizeFileName($fileInformation['filename']), $fileInformation['extension']);
+        $fileName = $this->createUniqueFile($this->uploadDirectoryMonth, $this->sanitizeFileName($fileInformation['filename']), $fileInformation['extension']);
 
         $file['extension']   = strtolower($fileInformation['extension']);
         $file['unique_name'] = $fileName;
+
+        // Tinify image, before it is stored
+        if (!isset($options['skip_tinify'])) {
+            if ($file['extension'] === 'jpg' || $file['extension'] === 'png') {
+                if ($this->tinify($file['tmp_name'])) {
+                    clearstatcache(true, $file['tmp_name']);
+                    $file['size'] = filesize($file['tmp_name']);
+                }
+            }
+        }
+
+        $file['file_dimensions'] = $this->getImageDimensions($file['tmp_name'], $file['extension']);
 
         // Upload file
         if (!$this->uploadFile($file)) {
@@ -1191,30 +1331,9 @@ class MediaManagerFilesHelper
             ];
         }
 
-        // Tinify image
-        if (!isset($options['skip_tinify'])) {
-            if ($file['extension'] === 'jpg' || $file['extension'] === 'png') {
-                if ($this->tinify($this->uploadDirectory . $this->uploadDirectoryMonth . $file['unique_name'])) {
-                    $file['size'] = filesize($this->uploadDirectory . $this->uploadDirectoryMonth . $file['unique_name']);
-                }
-            }
-        }
-
-        if ($file['extension'] === 'pdf' && extension_loaded('Imagick')) {
-            $previewName = str_replace('.pdf', '_thumb.jpg', $file['unique_name']);
-
-            $pdfPreview = new Imagick();
-            $pdfPreview->setResolution(230, 180);
-            $pdfPreview->readImage($this->uploadDirectory . $this->uploadDirectoryMonth . $file['unique_name'].'[0]');
-            $pdfPreview->setIteratorIndex(0);
-            $pdfPreview->setImageFormat('jpeg');
-            $pdfPreview->writeImage($this->uploadDirectory . $this->uploadDirectoryMonth . $previewName);
-            $pdfPreview->clear();
-            $pdfPreview->destroy();
-        }
+        $this->createPreviews($file['tmp_name'], $this->uploadDirectoryMonth . $file['unique_name'], $file['extension'], $file['hash']);
 
         $file['version']    = $this->createVersionNumber();
-        $file['upload_dir'] = $this->uploadDirectory . $this->uploadDirectoryMonth;
         $file['media_sources_id'] = $data['source'];
 
         // Add file to database
@@ -1261,11 +1380,8 @@ class MediaManagerFilesHelper
         $file->set('media_sources_id', $data['source']);
 
         // If file type is image set dimensions
-        if ($this->isImage($fileData['extension'])) {
-            $image = getimagesize($this->uploadDirectory . $this->uploadDirectoryMonth . $fileData['unique_name']);
-            if ($image) {
-                $file->set('file_dimensions', $image[0] . 'x' . $image[1]);
-            }
+        if ($this->isImage($fileData['extension']) && !empty($fileData['file_dimensions'])) {
+            $file->set('file_dimensions', $fileData['file_dimensions']);
         }
 
         if ($file->save()) {
@@ -1337,7 +1453,7 @@ class MediaManagerFilesHelper
 
                 if ($licenseFile) {
                     $fileInformation    = pathinfo($licenseFile['name']);
-                    $fileName           = $this->createUniqueFile($this->uploadDirectory . $this->licenseDirectory . $this->uploadDirectoryMonth, $this->sanitizeFileName($fileInformation['filename']), $fileInformation['extension']);
+                    $fileName           = $this->createUniqueFile($this->licenseDirectory . $this->uploadDirectoryMonth, $this->sanitizeFileName($fileInformation['filename']), $fileInformation['extension']);
 
                     $licenseFile['extension']   = strtolower($fileInformation['extension']);
                     $licenseFile['unique_name'] = $fileName;
@@ -1508,7 +1624,6 @@ class MediaManagerFilesHelper
 
         $data['unique_name']    = $filename;
         $data['extension']      = $fileInformation['extension'];
-        $data['upload_dir']     = $this->uploadDirectory . $this->uploadDirectoryMonth;
 
         // Save meta fields
         if (isset($data['meta']) && is_array($data['meta'])) {
@@ -1538,13 +1653,13 @@ class MediaManagerFilesHelper
             if (!empty($_FILES['license_file'])) {
                 /* Remove current file. */
                 if (!empty($license->get('license_path'))) {
-                    unlink($this->uploadDirectory . $this->licenseDirectory . $license->get('license_path'));
+                    $this->storage->delete($this->licenseDirectory . $license->get('license_path'));
                 }
 
                 /* Upload new file. */
                 $licenseFile                = $_FILES['license_file'];
                 $fileInformation            = pathinfo($licenseFile['name']);
-                $fileName                   = $this->createUniqueFile($this->uploadDirectory . $this->uploadDirectoryMonth, $this->sanitizeFileName($fileInformation['filename']), $fileInformation['extension']);
+                $fileName                   = $this->createUniqueFile($this->licenseDirectory . $this->uploadDirectoryMonth, $this->sanitizeFileName($fileInformation['filename']), $fileInformation['extension']);
                 $licenseFile['unique_name'] = $fileName;
 
                 /* Upload license file. */
@@ -1613,8 +1728,8 @@ class MediaManagerFilesHelper
             return false;
         }
 
-        if (!$this->versionDirectory) {
-            $this->createUploadDirectory($file['media_sources_id']);
+        if (!$this->createUploadDirectory($file['media_sources_id'])) {
+            return false;
         }
 
         $version = $this->mediaManager->modx->newObject('MediamanagerFilesVersions');
@@ -1630,13 +1745,14 @@ class MediaManagerFilesHelper
             $file['extension'] = $fileInformation['extension'];
         }
 
-        $file['version_name'] = $versionFileName;
+        $path = $file['version_path'] . '/' . $versionFileName;
 
-        if ($this->uploadVersionFile($file) === false) {
+        // The stored file to copy: the file's own path, or the file just uploaded
+        $sourceKey = !empty($file['path']) ? $file['path'] : $this->uploadDirectoryMonth . $file['unique_name'];
+
+        if ($this->uploadVersionFile($sourceKey, $path) === false) {
             return false;
         }
-
-        $path = $this->versionUrl . $file['file_id'] . DIRECTORY_SEPARATOR . $versionFileName;
 
         $version->set('mediamanager_files_id', $fileId);
         $version->set('version',               $file['version']);
@@ -1651,13 +1767,8 @@ class MediaManagerFilesHelper
         }
 
         // If file type is image set dimensions
-        if ($this->isImage($file['extension'])) {
-            if (file_exists($file['upload_dir'] . $file['unique_name'])) {
-                $image = getimagesize($file['upload_dir'] . $file['unique_name']);
-                if ($image) {
-                    $version->set('file_dimensions', $image[0] . 'x' . $image[1]);
-                }
-            }
+        if ($this->isImage($file['extension']) && !empty($file['file_dimensions'])) {
+            $version->set('file_dimensions', $file['file_dimensions']);
         }
 
         $version->set('file_hash', !empty($file['hash']) ? $file['hash'] : $file['file_hash']);
@@ -1732,13 +1843,19 @@ class MediaManagerFilesHelper
         $file->set('edited_on',       time());
         $file->set('edited_by',       $this->mediaManager->modx->getUser()->get('id'));
 
-        $this->setUploadPaths();
+        $this->setUploadPaths($file->get('media_sources_id'));
 
         //Get old file and replace current file
-        $versionFile = $this->uploadDirectory . $this->removeSlashes($version->get('path'));
-        $currentFile = $this->uploadDirectory . $this->removeSlashes($file->get('path'));
+        $versionFile = $this->removeSlashes($version->get('path'));
+        $currentFile = $this->removeSlashes($file->get('path'));
 
-        $replacedFile = copy($versionFile, $currentFile);
+        $replacedFile = $this->storage && $this->storage->copy($versionFile, $currentFile);
+
+        if ($replacedFile) {
+            // Listeners have always received the absolute path of the version file, where there is one
+            $versionFile = $this->storage->localPath($versionFile) ?: $versionFile;
+        }
+
         if (!$replacedFile) {
             return [
                 'status'  => self::STATUS_ERROR,
@@ -1848,49 +1965,49 @@ class MediaManagerFilesHelper
         foreach ($files as $file) {
             $fileRow = $file;
             $file    = $this->fileToArray($fileRow);
-            $path    = $file['path'];
+            $path    = $file['file_path'];
             if ($file['is_archived']) {
                 $path = $file['archive_path'];
             }
 
-            $this->createUploadDirectory($file['media_sources_id']);
+            $storage = $this->mediaManager->sources->getStorage($file['media_sources_id']);
+            if (!$storage) {
+                $response['status']   = self::STATUS_ERROR;
+                $response['message'] .= $this->mediaManager->modx->lexicon('mediamanager.files.error.file_not_found') . '<br />';
+                continue;
+            }
 
             // Delete all versions from server
             $versions = $this->mediaManager->modx->getIterator('MediamanagerFilesVersions', ['mediamanager_files_id' => $file['id']]);
             foreach ($versions as $version) {
                 // Delete thumbnails for each version
                 $thumbPath = $this->getThumbnail($file, 'path', $version->get('file_hash'));
-                if (file_exists($thumbPath)) {
+                if ($thumbPath && file_exists($thumbPath)) {
                     unlink($thumbPath);
                 }
 
-                if (file_exists($this->uploadDirectory . $version->path)) {
-                    unlink($this->uploadDirectory . $version->path);
-                }
+                $storage->delete($version->get('path'));
                 $version->remove();
             }
 
             // Delete versions directory
-            $dir = $this->versionDirectory . $file['id'];
-            if (file_exists($this->uploadDirectory . $dir)) {
-                try {
-                    rmdir($this->uploadDirectory . $dir);
-                } catch (Exception $exception) {
-                    $response['message'] .= $this->mediaManager->modx->lexicon('mediamanager.files.error.delete_dir', ['dir' => $dir]) . '<br />';
-                    $response['message'] .= $exception->getMessage() . '<hr />';
-                }
+            $dir = self::VERSION_DIRECTORY . '/' . $file['id'];
+            if (!$storage->deleteDirectory($dir)) {
+                $response['message'] .= $this->mediaManager->modx->lexicon('mediamanager.files.error.delete_dir', ['dir' => $dir]) . '<hr />';
             }
 
-            // Delete thumbnail from server
+            // Delete thumbnail and PDF preview from server
             $thumbPath = $this->getThumbnail($file, 'path');
-            if (file_exists($thumbPath)) {
+            if ($thumbPath && file_exists($thumbPath)) {
                 unlink($thumbPath);
             }
 
-            // Delete file from server
-            if (file_exists($this->uploadDirectory . $path)) {
-                unlink($this->uploadDirectory . $path);
+            if ($file['file_type'] === 'pdf' && ($previewPath = $this->getPdfPreview($file, 'path'))) {
+                unlink($previewPath);
             }
+
+            // Delete file from server
+            $storage->delete($path);
 
             // Delete file
             $fileRow->remove();
@@ -2010,10 +2127,11 @@ class MediaManagerFilesHelper
                 return $response;
             }
 
-            $old = $this->filePath($file->toArray());
-            $new = $this->createUniqueFile($this->uploadDirectory . $this->archiveDirectory, time(), $file->get('file_type'), uniqid('-'));
+            $old = $file->get('path');
+            $new = $this->createUniqueFile($this->archiveDirectory, time(), $file->get('file_type'), uniqid('-'));
 
-            if (file_exists($old) && !$this->renameFile($old, $this->uploadDirectory . $this->archiveDirectory . $new)) {
+            // Archived files are stored privately
+            if ($this->storage->fileExists($old) && !$this->storage->move($old, $this->archiveDirectory . $new, true)) {
                 $response['status'] = self::STATUS_ERROR;
                 $response['message'] .= $this->mediaManager->modx->lexicon('mediamanager.files.error.file_archive', array('id' => $id)) . '<br />';
                 continue;
@@ -2140,7 +2258,6 @@ class MediaManagerFilesHelper
         $version             = $this->createVersionNumber($newFileId);
         $data['version']     = $version;
         $fileInformation     = pathinfo($data['path']);
-        $data['upload_dir']  = $this->addTrailingSlash(MODX_BASE_PATH) . ltrim($this->addTrailingSlash($fileInformation['dirname']), '/');
         $data['unique_name'] = $fileInformation['filename'] . '.' . $fileInformation['extension'];
         $data['size']        = $data['file_size'];
 
@@ -2212,27 +2329,27 @@ class MediaManagerFilesHelper
             return $response;
         }
 
-        // Create archive directory
-        if (!$this->createUploadDirectory()) {
-            $response['status']  = self::STATUS_ERROR;
-            $response['message'] = $this->alertMessageHtml($this->mediaManager->modx->lexicon('mediamanager.files.error.create_directory'), 'danger');
-            return $response;
-        }
-
         // Unarchive files
         foreach ($fileIds as $key => $id) {
             $file = $this->mediaManager->modx->getObject('MediamanagerFiles', $id);
 
-            $old = $this->uploadDirectory . $file->get('archive_path');
-            $new = $this->uploadDirectory . $file->get('path');
+            if (!$this->createUploadDirectory($file->get('media_sources_id'))) {
+                $response['status']  = self::STATUS_ERROR;
+                $response['message'] = $this->alertMessageHtml($this->mediaManager->modx->lexicon('mediamanager.files.error.create_directory'), 'danger');
+                return $response;
+            }
 
-            if (!file_exists($old)) {
+            $old = $file->get('archive_path');
+            $new = $file->get('path');
+
+            if (!$this->storage->fileExists($old)) {
                 $response['status'] = self::STATUS_ERROR;
                 $response['message'] .= $this->mediaManager->modx->lexicon('mediamanager.files.error.file_unarchive', array('id' => $id)) . '<br />';
                 continue;
             }
 
-            if (!$this->renameFile($old, $new)) {
+            // Restored files are public again
+            if (!$this->storage->move($old, $new, false)) {
                 $response['status'] = self::STATUS_ERROR;
                 $response['message'] .= $this->mediaManager->modx->lexicon('mediamanager.files.error.file_unarchive', array('id' => $id)) . '<br />';
                 continue;
@@ -2278,8 +2395,8 @@ class MediaManagerFilesHelper
             }
         }
 
-        // Create download directory
-        if (!$this->createUploadDirectory()) {
+        // Create download directory, in the local cache
+        if (!$this->setUploadPaths() || !$this->createLocalDirectory($this->storage->cachePath($this->downloadDirectory))) {
             $response['status']  = self::STATUS_ERROR;
             $response['message'] = $this->alertMessageHtml($this->mediaManager->modx->lexicon('mediamanager.files.error.create_directory'), 'danger');
             return $response;
@@ -2291,10 +2408,13 @@ class MediaManagerFilesHelper
         ));
 
         // Create zip
+        do {
+            $zipName = sha1(time()) . uniqid('-') . '.zip';
+        } while (file_exists($this->storage->cachePath($this->downloadDirectory . $zipName)));
+
         $zip         = new ZipArchive();
-        $zipName     = $this->createUniqueFile($this->uploadDirectory . $this->downloadDirectory, sha1(time()), 'zip', uniqid('-'));
-        $zipLocation = $this->uploadDirectory . $this->downloadDirectory . $zipName;
-        $zipUrl      = $this->addTrailingSlash($this->uploadUrl) . $this->downloadUrl . $zipName;
+        $zipLocation = $this->storage->cachePath($this->downloadDirectory . $zipName);
+        $zipUrl      = $this->absoluteUrl($this->storage->cacheUrl($this->downloadDirectory . $zipName));
 
         $zipFile = $zip->open($zipLocation, ZipArchive::CREATE);
         if ($zipFile !== true) {
@@ -2303,11 +2423,23 @@ class MediaManagerFilesHelper
             return $response;
         }
 
+        // Files are read when the zip is closed, so keep local copies until then
+        $localCopies = [];
         foreach ($files as $file) {
-            $zip->addFile($this->uploadDirectory . $file->get('path'), $file->get('path'));
+            $storage = $this->mediaManager->sources->getStorage($file->get('media_sources_id'));
+            $local   = $storage ? $storage->localCopy($file->get('path')) : false;
+
+            if ($local) {
+                $zip->addFile($local, $file->get('path'));
+                $localCopies[] = [$storage, $local];
+            }
         }
 
         $zip->close();
+
+        foreach ($localCopies as $localCopy) {
+            $localCopy[0]->releaseLocalCopy($localCopy[1]);
+        }
 
         // Check if zip is created
         if (!file_exists($zipLocation)) {
@@ -2381,22 +2513,31 @@ class MediaManagerFilesHelper
             // Save as new file
             return $this->duplicateFile($file, $imageData);
         }
-        $this->createUploadDirectory();
-        $filePath = $this->uploadDirectory . $this->removeSlashes($file->get('path'));
+        $this->createUploadDirectory($file->get('media_sources_id'));
+        $fileKey = $this->removeSlashes($file->get('path'));
+
+        // Write the cropped image locally first, to read its details
+        $localPath   = tempnam(sys_get_temp_dir(), 'mediamanager-');
+        $fileCreated = $localPath !== false ? file_put_contents($localPath, $imageData) : false;
 
         // Replace current file
-        $fileCreated = file_put_contents($filePath, $imageData);
+        if ($fileCreated === false || !$this->storage->write($fileKey, $imageData)) {
+            if ($localPath !== false) {
+                unlink($localPath);
+            }
 
-        if ($fileCreated === false) {
             $response['status'] = self::STATUS_ERROR;
             $response['message'] = $this->alertMessageHtml($this->mediaManager->modx->lexicon('mediamanager.files.error.image_not_saved'), 'danger');
             return $response;
         }
 
-        $hash          = $this->getFileHashByPath($filePath);
-        $image         = getimagesize($filePath);
-        $size          = filesize($filePath);
+        $hash          = $this->getFileHashByPath($localPath);
+        $image         = getimagesize($localPath);
+        $size          = filesize($localPath);
         $versionNumber = $this->createVersionNumber($file->get('id'));
+
+        $this->createPreviews($localPath, $fileKey, $file->get('file_type'), $hash);
+        unlink($localPath);
 
         $file->set('file_dimensions', $image[0] . 'x' . $image[1]);
         $file->set('file_hash', $hash);
@@ -2406,7 +2547,6 @@ class MediaManagerFilesHelper
         $data                = $file->toArray();
         $fileInformation     = pathinfo($data['path']);
         $data['version']     = $versionNumber;
-        $data['upload_dir']  = $this->uploadDirectory . ltrim($this->addTrailingSlash($fileInformation['dirname']), '/');
         $data['unique_name'] = $fileInformation['filename'] . '.' . $fileInformation['extension'];
 
         // Save file version.
@@ -2446,24 +2586,34 @@ class MediaManagerFilesHelper
 
         // Add unique id to file name if needed
         $fileName = explode('.', $file['name']); // @TODO: Need better solution (what if a filename contains multiple dots?)
-        $fileName = $this->createUniqueFile($this->uploadDirectory . $this->uploadDirectoryMonth, $fileName[0], $file['file_type']);
+        $fileName = $this->createUniqueFile($this->uploadDirectoryMonth, $fileName[0], $file['file_type']);
 
         $destinationPath = $this->uploadDirectoryMonth . $fileName;
-        $destinationAbsolute = $this->uploadDirectory . $destinationPath;
+
+        // Write the image locally first, to read its details
+        $localPath   = tempnam(sys_get_temp_dir(), 'mediamanager-');
+        $fileCreated = $localPath !== false ? file_put_contents($localPath, $imageData) : false;
 
         // Create new file
-        $fileCreated = file_put_contents($destinationAbsolute, $imageData);
-        if ($fileCreated === false) {
+        if ($fileCreated === false || !$this->storage->write($destinationPath, $imageData)) {
+            if ($localPath !== false) {
+                unlink($localPath);
+            }
+
             return [
                 'status'  => self::STATUS_ERROR,
                 'message' => $this->alertMessageHtml($this->mediaManager->modx->lexicon('mediamanager.files.error.file_upload', array('file' => $file['name'])), 'danger')
             ];
         }
 
-        $file['size']        = filesize($destinationAbsolute);
-        $file['hash']        = $this->getFileHashByPath($destinationAbsolute);
-        $file['extension']   = $file['file_type'];
-        $file['unique_name'] = $fileName;
+        $file['size']            = filesize($localPath);
+        $file['hash']            = $this->getFileHashByPath($localPath);
+        $file['extension']       = $file['file_type'];
+        $file['unique_name']     = $fileName;
+        $file['file_dimensions'] = $this->getImageDimensions($localPath, $file['file_type']);
+
+        $this->createPreviews($localPath, $destinationPath, $file['file_type'], $file['hash']);
+        unlink($localPath);
 
         // Get file categories
         $categories = $this->mediaManager->modx->getIterator('MediamanagerFilesCategories', array('mediamanager_files_id' => $file['id']));
@@ -2487,7 +2637,6 @@ class MediaManagerFilesHelper
         // Set source
         $data['source']     = $file['media_sources_id'];
         $file['version']    = $this->createVersionNumber();
-        $file['upload_dir'] = $this->uploadDirectory . $this->uploadDirectoryMonth;
 
         // Add file to database
         $fileId         = $this->insertFile($file, $data);
@@ -2540,8 +2689,10 @@ class MediaManagerFilesHelper
             $sourceId = $this->mediaManager->sources->getUserSource();
         }
 
+        $sourceStorage = $this->mediaManager->sources->getStorage($file['media_sources_id']);
+
         // Create upload directory
-        if (!$this->createUploadDirectory($sourceId)) {
+        if (!$sourceStorage || !$this->createUploadDirectory($sourceId)) {
             return [
                 'status'  => self::STATUS_ERROR,
                 'message' => $this->alertMessageHtml($this->mediaManager->modx->lexicon('mediamanager.files.error.create_directory'), 'danger')
@@ -2550,10 +2701,18 @@ class MediaManagerFilesHelper
 
         // Add unique id to file name if needed
         $fileName = explode('.', $file['name']);
-        $fileName = $this->createUniqueFile($this->uploadDirectory . $this->uploadDirectoryMonth, $fileName[0], $file['file_type']);
+        $fileName = $this->createUniqueFile($this->uploadDirectoryMonth, $fileName[0], $file['file_type']);
 
-        // Copy file
-        $fileCreated = $this->copyFile($this->uploadDirectory . $file['path'], $this->uploadDirectory . $this->uploadDirectoryMonth . $fileName);
+        // Copy file, which may be between different storages
+        $localPath   = $sourceStorage->localCopy($file['path']);
+        $fileCreated = $localPath !== false && $this->storage->writeFile($this->uploadDirectoryMonth . $fileName, $localPath);
+
+        if ($fileCreated) {
+            $this->createPreviews($localPath, $this->uploadDirectoryMonth . $fileName, $file['file_type'], $file['file_hash']);
+        }
+
+        $sourceStorage->releaseLocalCopy($localPath);
+
         if ($fileCreated === false) {
             return [
                 'status'  => self::STATUS_ERROR,
@@ -2581,8 +2740,8 @@ class MediaManagerFilesHelper
             $data['tags'][] = $tag->get('mediamanager_tags_id');
         }
 
-        // Set source
-        $data['source'] = $file['media_sources_id'];
+        // Set source, to the source the file was copied to
+        $data['source'] = $sourceId;
 
         // Add file to database
         if (!$this->insertFile($file, $data)) {
@@ -2599,19 +2758,6 @@ class MediaManagerFilesHelper
             'status'  => self::STATUS_SUCCESS,
             'message' => $this->alertMessageHtml($this->mediaManager->modx->lexicon('mediamanager.files.success.file_copy', array('file' => $fileName)), 'success')
         ];
-    }
-
-    /**
-     * Copy file.
-     *
-     * @param string $source
-     * @param string $destination
-     *
-     * @return bool
-     */
-    private function copyFile($source, $destination)
-    {
-        return copy($source, $destination);
     }
 
     /**
@@ -2786,7 +2932,7 @@ class MediaManagerFilesHelper
     /**
      * Create unique file name.
      *
-     * @param string $directory
+     * @param string $directory Directory, relative to the storage root.
      * @param string $name
      * @param string $extension
      * @param string $uniqueId
@@ -2796,7 +2942,7 @@ class MediaManagerFilesHelper
     private function createUniqueFile($directory, $name, $extension, $uniqueId = '')
     {
         $file = $directory . $name . $uniqueId . '.' . $extension;
-        if (file_exists($file)) {
+        if ($this->storage->fileExists($file)) {
             $uniqueId = uniqid('-');
             return $this->createUniqueFile($directory, $name, $extension, $uniqueId);
         }
@@ -2805,7 +2951,7 @@ class MediaManagerFilesHelper
     }
 
     /**
-     * Set upload paths.
+     * Set upload paths and the storage of a media source.
      *
      * @param int $sourceId
      * @return bool
@@ -2827,38 +2973,28 @@ class MediaManagerFilesHelper
             return false;
         }
 
-        // Upload urls
-        $this->uploadUrl             = $mediaSource['baseUrl'];
-        if ($mediaSource['baseUrlRelative'] !== false) {
-            $this->uploadUrl         = $this->addTrailingSlash($this->mediaManager->modx->getOption('site_url')) . $this->removeSlashes($mediaSource['baseUrl']) . DIRECTORY_SEPARATOR;
+        $this->storage = $this->mediaManager->sources->getStorage($sourceId);
+
+        if (!$this->storage) {
+            return false;
         }
 
-        $this->uploadUrlYear         = $year . DIRECTORY_SEPARATOR;
-        $this->uploadUrlMonth        = $this->uploadUrlYear . $month . DIRECTORY_SEPARATOR;
+        // Upload directories, relative to the storage root
+        $this->uploadDirectoryYear   = $year . '/';
+        $this->uploadDirectoryMonth  = $this->uploadDirectoryYear . $month . '/';
 
-        // Upload directories
-        $this->uploadDirectory       = $mediaSource['basePath'];
-        if ($mediaSource['basePathRelative'] !== false) {
-            $this->uploadDirectory   = $this->addTrailingSlash(MODX_BASE_PATH) . $this->removeSlashes($mediaSource['basePath']) . DIRECTORY_SEPARATOR;
-        }
+        // Archive path
+        $this->archiveDirectory      = self::ARCHIVE_DIRECTORY . '/';
 
-        $this->uploadDirectoryYear   = $year . DIRECTORY_SEPARATOR;
-        $this->uploadDirectoryMonth  = $this->uploadDirectoryYear . $month . DIRECTORY_SEPARATOR;
+        // Download path, relative to the local cache root
+        $this->downloadDirectory     = self::DOWNLOAD_DIRECTORY . '/';
 
-        // Archive url and path
-        $this->archiveUrl            = self::ARCHIVE_DIRECTORY . DIRECTORY_SEPARATOR;
-        $this->archiveDirectory      = self::ARCHIVE_DIRECTORY . DIRECTORY_SEPARATOR;
+        // Version path
+        $this->versionDirectory      = self::VERSION_DIRECTORY . '/';
 
-        // Download url and path
-        $this->downloadUrl           = self::DOWNLOAD_DIRECTORY . DIRECTORY_SEPARATOR;
-        $this->downloadDirectory     = self::DOWNLOAD_DIRECTORY . DIRECTORY_SEPARATOR;
+        $this->licenseDirectory      = self::LICENSE_DIRECTORY . '/';
 
-        // Version url and path
-        $this->versionUrl            = self::VERSION_DIRECTORY . DIRECTORY_SEPARATOR;
-        $this->versionDirectory      = self::VERSION_DIRECTORY . DIRECTORY_SEPARATOR;
-
-        $this->licenseUrl            = self::LICENSE_DIRECTORY . DIRECTORY_SEPARATOR;
-        $this->licenseDirectory      = self::LICENSE_DIRECTORY . DIRECTORY_SEPARATOR;
+        return true;
     }
 
     /**
@@ -2869,50 +3005,29 @@ class MediaManagerFilesHelper
      */
     private function createUploadDirectory($sourceId = 0)
     {
-        $this->setUploadPaths($sourceId);
-
-        if (!file_exists($this->uploadDirectory)) {
-            if (!$this->createDirectory($this->uploadDirectory)) return false;
+        if (!$this->setUploadPaths($sourceId)) {
+            return false;
         }
 
-        if (!file_exists($this->uploadDirectory . $this->uploadDirectoryYear)) {
-            if (!$this->createDirectory($this->uploadDirectory . $this->uploadDirectoryYear)) return false;
-        }
-
-        if (!file_exists($this->uploadDirectory . $this->uploadDirectoryMonth)) {
-            if (!$this->createDirectory($this->uploadDirectory . $this->uploadDirectoryMonth)) return false;
-        }
-
-        if (!file_exists($this->uploadDirectory . $this->archiveDirectory)) {
-            if (!$this->createDirectory($this->uploadDirectory . $this->archiveDirectory)) return false;
-        }
-
-        if (!file_exists($this->uploadDirectory . $this->downloadDirectory)) {
-            if (!$this->createDirectory($this->uploadDirectory . $this->downloadDirectory)) return false;
-        }
-
-        if (!file_exists($this->uploadDirectory . $this->versionDirectory)) {
-            if (!$this->createDirectory($this->uploadDirectory . $this->versionDirectory)) return false;
-        }
-
-        if (!file_exists($this->uploadDirectory . $this->licenseDirectory)) {
-            if (!$this->createDirectory($this->uploadDirectory . $this->licenseDirectory)) return false;
+        foreach ([$this->uploadDirectoryMonth, $this->archiveDirectory, $this->versionDirectory, $this->licenseDirectory] as $directory) {
+            if (!$this->storage->createDirectory($directory)) {
+                return false;
+            }
         }
 
         return true;
     }
 
     /**
-     * Create directory.
+     * Create a local directory, such as a cache directory.
      *
      * @param string $directoryPath
-     * @param int $mode
      *
      * @return bool
      */
-    private function createDirectory($directoryPath, $mode = 0777)
+    private function createLocalDirectory($directoryPath)
     {
-        return mkdir($directoryPath, $mode, true);
+        return is_dir($directoryPath) || mkdir($directoryPath, 0755, true);
     }
 
     /**
@@ -2924,23 +3039,11 @@ class MediaManagerFilesHelper
      */
     private function uploadFile($file)
     {
-        $target     = $this->uploadDirectory . $this->uploadDirectoryMonth . $file['unique_name'];
-        $uploadFile = move_uploaded_file($file['tmp_name'], $target);
-
-        if (!$uploadFile) {
-            $uploadFile = copy($file['tmp_name'], $target);
-        }
-
-        if ($uploadFile) {
-            chmod($target, 0644);
-            return true;
-        }
-
-        return false;
+        return $this->storage->writeFile($this->uploadDirectoryMonth . $file['unique_name'], $file['tmp_name']);
     }
 
     /**
-     * Upload license.
+     * Upload license. License files are stored privately.
      *
      * @param array $file
      *
@@ -2948,68 +3051,36 @@ class MediaManagerFilesHelper
      */
     private function uploadLicenseFile($file)
     {
-        $path       = rtrim($this->uploadDirectory, '/') . '/' . trim($this->licenseDirectory, '/') . '/' . trim($this->uploadDirectoryMonth, '/') . '/';
-        $target     = $path . $file['unique_name'];
-        $uploadFile = move_uploaded_file($file['tmp_name'], $target);
-
-        if (!file_exists($path)) {
-            $this->createDirectory($path);
-        }
-
-        if (!$uploadFile) {
-            $uploadFile = copy($file['tmp_name'], $target);
-        }
-
-        if ($uploadFile) {
-            chmod($target, 0644);
-            return true;
-        }
-
-        return false;
+        return $this->storage->writeFile($this->licenseDirectory . $this->uploadDirectoryMonth . $file['unique_name'], $file['tmp_name'], true);
     }
 
     /**
      * Remove license file.
      *
      * @param MediamanagerFilesLicenseFile $license
+     * @param int $sourceId Media source of the file the license belonged to.
      * @return bool
      */
-    public function removeLicenseFile($license)
+    public function removeLicenseFile($license, $sourceId = 0)
     {
-        if (!$this->uploadDirectory) {
-            $this->setUploadPaths();
+        if (!$this->setUploadPaths($sourceId)) {
+            return false;
         }
 
-        $target = $this->uploadDirectory . $this->licenseDirectory . $license->get('license_path');
-
-        return unlink($target);
+        return $this->storage->delete($this->licenseDirectory . $license->get('license_path'));
     }
 
     /**
-     * Upload version file.
+     * Copy a stored file to a version file. Version files are stored privately.
      *
-     * @param array $file
+     * @param string $sourceKey
+     * @param string $versionKey
      *
      * @return bool
      */
-    private function uploadVersionFile($file)
+    private function uploadVersionFile($sourceKey, $versionKey)
     {
-        $path   = $this->uploadDirectory . $file['version_path'];
-        $target = $path . '/' . $file['version_name'];
-
-        if (!file_exists($path)) {
-            $this->createDirectory($path );
-        }
-
-        $uploadedFile = $this->uploadDirectory . $this->uploadDirectoryMonth . $file['unique_name'];
-        if (is_file($uploadedFile)) {
-            $uploadFile = copy($uploadedFile, $target);
-            if ($uploadFile) {
-                return true;
-            }
-        }
-
-        return false;
+        return $this->storage->fileExists($sourceKey) && $this->storage->copy($sourceKey, $versionKey, true);
     }
 
     /**
@@ -3042,19 +3113,6 @@ class MediaManagerFilesHelper
     }
 
     /**
-     * Rename or move file.
-     *
-     * @param string $old
-     * @param string $new
-     *
-     * @return bool
-     */
-    private function renameFile($old, $new)
-    {
-        return rename($old, $new);
-    }
-
-    /**
      * Remove file.
      *
      * @param string $file
@@ -3062,9 +3120,7 @@ class MediaManagerFilesHelper
      */
     private function removeFile($file)
     {
-        $target = $this->uploadDirectory . $this->uploadDirectoryMonth . $file['unique_name'];
-
-        return unlink($target);
+        return $this->storage->delete($this->uploadDirectoryMonth . $file['unique_name']);
     }
 
     /**

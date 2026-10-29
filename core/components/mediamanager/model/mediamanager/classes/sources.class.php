@@ -23,6 +23,13 @@ class MediaManagerSourcesHelper
     private $userSource = 1;
 
     /**
+     * Storage per media source ID.
+     *
+     * @var \Sterc\MediaManager\Storage\Storage[]
+     */
+    private $storages = [];
+
+    /**
      * MediaManagerSourcesHelper constructor.
      *
      * @param MediaManager $mediaManager
@@ -324,5 +331,32 @@ class MediaManagerSourcesHelper
         ];
 
         return $source;
+    }
+
+    /**
+     * Get the storage for a media source.
+     *
+     * @param int $sourceId
+     * @return \Sterc\MediaManager\Storage\Storage|null
+     */
+    public function getStorage($sourceId)
+    {
+        $sourceId = (int) $sourceId;
+
+        if (!array_key_exists($sourceId, $this->storages)) {
+            $this->storages[$sourceId] = null;
+
+            $source = $this->mediaManager->modx->getObject('sources.modMediaSource', [
+                'id' => $sourceId
+            ]);
+
+            if ($source) {
+                $factory = new \Sterc\MediaManager\Storage\StorageFactory($this->mediaManager->modx);
+
+                $this->storages[$sourceId] = $factory->create($source);
+            }
+        }
+
+        return $this->storages[$sourceId];
     }
 }

@@ -1,6 +1,9 @@
 <?php
 /**
  * Thumbnail processor
+ *
+ * Creates a missing thumbnail in the local cache from the stored file, which
+ * may be on S3, then outputs it.
  */
 class MediaManagerThumbnailProcessor extends modProcessor
 {
@@ -12,71 +15,31 @@ class MediaManagerThumbnailProcessor extends modProcessor
         return $this->modx->hasPermission('file_manager');
     }
 
+    public function initialize()
+    {
+        $this->mediaManager = $this->modx->getService('mediamanager', 'MediaManager', $this->modx->getOption('mediamanager.core_path', null, $this->modx->getOption('core_path') . 'components/mediamanager/') . 'model/mediamanager/');
+
+        return parent::initialize();
+    }
+
     public function process()
     {
-        /* Prevent path traversal and set all paths and filenames. */
-        $path = preg_replace('/(\.+\/)+/', '', htmlspecialchars($this->getProperty('path')));
-        $cache = preg_replace('/(\.+\/)+/', '', htmlspecialchars($this->getProperty('cache')));
-        $thumbsDir = dirname($cache);
-        $thumbName = $cache;
+        $file = $this->modx->getObject('MediamanagerFiles', (int) $this->getProperty('id'));
 
-        if (empty($path) || empty($thumbsDir) || empty($thumbName)) {
+        if (!$file || !($this->mediaManager instanceof MediaManager)) {
             return '';
         }
 
-        $phpThumbPath = $this->modx->getOption('core_path', null, MODX_CORE_PATH) . 'model/phpthumb/modphpthumb.class.php';
-        if (file_exists($phpThumbPath)) {
-            require_once $phpThumbPath;
-        }
-        if (!$this->modx->getService('phpthumb', 'modPhpThumb')) {
-            $this->modx->log(modX::LOG_LEVEL_ERROR,'Could not load modPhpThumb class.');
-            return false;
-        }
+        $thumbPath = $this->mediaManager->files->ensureThumbnail($this->mediaManager->files->fileToArray($file));
 
-        /* Build the image. */
-        $phpThumb = new modPhpThumb($this->modx);
-        $phpThumb->cache_filename = $thumbName;
-        $phpThumb->setParameter('h', 180);
-        $phpThumb->setParameter('w', 230);
-        $phpThumb->setParameter('q', 80);
-        $phpThumb->setParameter('far', 1);
-        $phpThumb->setParameter('config_cache_directory', $thumbsDir);
-        $phpThumb->setParameter('config_allow_src_above_docroot', true);
-        $phpThumb->set($path);
-
-        /* Check to see if there's a cached file of this already. */
-        if ($phpThumb->checkForCachedFile()) {
-            $phpThumb->loadCache();
+        if ($thumbPath === false) {
             return '';
         }
 
-        $phpThumb->generate();
-        $phpThumb->cache();
-        $phpThumb->output();
-
-        return '';
-    }
-
-    /**
-     * Add trailing slash to string.
-     *
-     * @param string $string
-     * @return string
-     */
-    public function addTrailingSlash($string)
-    {
-        return rtrim($string, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
-    }
-
-    /**
-     * Remove slashes from string.
-     *
-     * @param string $string
-     * @return string
-     */
-    public function removeSlashes($string)
-    {
-        return trim($string, DIRECTORY_SEPARATOR);
+        header('Content-Type: ' . mime_content_type($thumbPath));
+        header('Content-Length: ' . filesize($thumbPath));
+        readfile($thumbPath);
+        exit;
     }
 }
 

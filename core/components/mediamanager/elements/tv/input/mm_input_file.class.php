@@ -16,10 +16,8 @@ if (!class_exists('MediaManagerInputFileRender')) {
             $path = '';
             $file = $this->modx->getObject('MediamanagerFiles', $value);
             if ($file) {
-                $mediaSourceId  = $file->get('media_sources_id');
-                $mediaSource    = $this->modx->getObject('sources.modFileMediaSource', ['id' => $mediaSourceId]);
-                $basePath       = $mediaSource->getProperties()['basePath']['value'];
-                $path           = $basePath . $file->get('path');
+                $mediaManager = $this->modx->getService('mediamanager', 'MediaManager', $this->modx->getOption('mediamanager.core_path', null, $this->modx->getOption('core_path') . 'components/mediamanager/') . 'model/mediamanager/');
+                $path         = $mediaManager->files->fileUrl($file->toArray());
             }
 
             $this->setPlaceholder('path', $path);

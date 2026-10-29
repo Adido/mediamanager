@@ -165,7 +165,16 @@ class cbMediaManagerGalleryInput extends cbBaseInput
             // grab image sizes
             if (!isset($img['width']) || $img['width'] < 1) {
                 $size = false;
-                if (file_exists($img['url'])) {
+
+                // Use the stored dimensions, which also covers files on S3
+                if (!empty($img['file_id']) && ($file = $this->modx->getObject('MediamanagerFiles', (int) $img['file_id']))) {
+                    $dimensions = explode('x', (string) $file->get('file_dimensions'));
+                    if (count($dimensions) === 2 && (int) $dimensions[0] > 0) {
+                        $size = [(int) $dimensions[0], (int) $dimensions[1]];
+                    }
+                }
+
+                if (!$size && file_exists($img['url'])) {
                     $size = getimagesize($img['url']);
                 }
 
