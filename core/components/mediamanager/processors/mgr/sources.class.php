@@ -31,7 +31,8 @@ class MediaManagerSourcesProcessor extends modProcessor
 
     private function getList()
     {
-        return $this->mediaManager->sources->getListHtml();
+        $html = $this->mediaManager->sources->getListHtml();
+        return $html ? [$html] : [];
     }
 
 }

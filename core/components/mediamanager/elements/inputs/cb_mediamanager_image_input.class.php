@@ -68,13 +68,14 @@ class cbMediaManagerImageInput extends cbBaseInput
                 }
             }
 
-            if (!$size && file_exists($data['url']) && is_readable($data['url'])) {
-                $size = getimagesize($data['url']);
+            $url = isset($data['url']) ? (string) $data['url'] : '';
+            if (!$size && file_exists($url) && is_readable($url)) {
+                $size = getimagesize($url);
             }
 
             if (!$size) {
                 // Try it with a normalised path
-                $normalisedPath = str_replace(MODX_BASE_URL.MODX_BASE_URL, MODX_BASE_URL, MODX_BASE_PATH . $data['url']);
+                $normalisedPath = str_replace(MODX_BASE_URL.MODX_BASE_URL, MODX_BASE_URL, MODX_BASE_PATH . $url);
                 if (file_exists($normalisedPath) && is_readable($normalisedPath)) {
                     $size = getimagesize($normalisedPath);
                 }

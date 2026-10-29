@@ -53,15 +53,20 @@ class LocalStorage extends Storage
         }
 
         /*
-         * Root-relative URLs, as Media Manager has always used. A source at the
-         * web root, with an empty or "/" base URL, gets "/" rather than "//",
-         * which browsers would read as a protocol-relative host.
+         * Root-relative URLs, as Media Manager has always used. A relative base
+         * URL is relative to MODX_BASE_URL, so sites installed in a subdirectory
+         * get the right URL. A source at the web root, with an empty or "/" base
+         * URL, gets "/" rather than "//", which browsers would read as a
+         * protocol-relative host.
          */
         $baseUrl     = isset($properties['baseUrl']) ? (string) $properties['baseUrl'] : '';
         $relativeUrl = !isset($properties['baseUrlRelative']) || $properties['baseUrlRelative'] !== false;
 
         if ($relativeUrl) {
-            $fileUrl = trim($baseUrl, '/') === '' ? '/' : '/' . trim($baseUrl, '/') . '/';
+            $fileUrl = rtrim(MODX_BASE_URL, '/') . '/';
+            if (trim($baseUrl, '/') !== '') {
+                $fileUrl .= trim($baseUrl, '/') . '/';
+            }
         } else {
             $fileUrl = rtrim($baseUrl, '/') . '/';
         }

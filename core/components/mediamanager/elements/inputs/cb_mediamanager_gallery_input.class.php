@@ -140,6 +140,10 @@ class cbMediaManagerGalleryInput extends cbBaseInput
      */
     public function process(cbField $field, array $data = array())
     {
+        if (!isset($data['images']) || !is_array($data['images'])) {
+            $data['images'] = [];
+        }
+
         $settings = $data;
         unset($settings['images']);
 
@@ -185,12 +189,13 @@ class cbMediaManagerGalleryInput extends cbBaseInput
                     }
                 }
 
-                if (!$size && file_exists($img['url'])) {
-                    $size = getimagesize($img['url']);
+                $url = isset($img['url']) ? (string) $img['url'] : '';
+                if (!$size && file_exists($url)) {
+                    $size = getimagesize($url);
                 }
 
                 if (!$size) {
-                    $normalisedPath = str_replace(MODX_BASE_URL.MODX_BASE_URL, MODX_BASE_URL, MODX_BASE_PATH . $img['url']);
+                    $normalisedPath = str_replace(MODX_BASE_URL.MODX_BASE_URL, MODX_BASE_URL, MODX_BASE_PATH . $url);
                     if (file_exists($normalisedPath)) {
                         $size = getimagesize($normalisedPath);
                     }

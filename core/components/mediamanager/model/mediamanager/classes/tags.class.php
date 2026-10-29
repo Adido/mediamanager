@@ -11,7 +11,7 @@ class MediaManagerTagsHelper
 
     public function createTag($name)
     {
-        $name = trim($name);
+        $name = trim((string) $name);
 
         if (empty($name)) {
             return [
