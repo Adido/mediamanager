@@ -15,7 +15,7 @@ class MediamanagerFiles extends xPDOSimpleObject
         /* Remove related license if it has no connections with other files. */
         if ($result && $license && count($license->getMany('LicenseFiles')) === 0) {
             $mediamanager = $this->xpdo->getService('mediamanager', 'MediaManager', $this->xpdo->getOption('mediamanager.core_path', null, $this->xpdo->getOption('core_path') . 'components/mediamanager/') . 'model/mediamanager/');
-            $mediamanager->files->removeLicenseFile($license);
+            $mediamanager->files->removeLicenseFile($license, $this->get('media_sources_id'));
 
             $license->remove();
         }

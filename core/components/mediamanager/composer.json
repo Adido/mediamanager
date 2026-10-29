@@ -1,8 +1,53 @@
 {
     "name": "sterc/mediamanager",
+    "require": {
+        "league/flysystem": "^3.35.3",
+        "league/flysystem-local": "^3.35.3",
+        "league/flysystem-aws-s3-v3": "^3.35.3"
+    },
     "autoload": {
         "psr-4": {
             "Sterc\\MediaManager\\": "src/"
+        }
+    },
+    "config": {
+        "platform": {
+            "php": "8.1"
+        }
+    },
+    "scripts": {
+        "strauss-download": [
+            "sh -c 'test -f ../../../_build/bin/strauss.phar || (mkdir -p ../../../_build/bin && curl -fsSL -o ../../../_build/bin/strauss.phar https://github.com/BrianHenryIE/strauss/releases/download/0.31.1/strauss.phar)'",
+            "@php ../../../_build/strauss-verify.php"
+        ],
+        "prefix-namespaces": [
+            "Aws\\Script\\Composer\\Composer::removeUnusedServices",
+            "@strauss-download",
+            "@php ../../../_build/bin/strauss.phar",
+            "@php ../../../_build/strauss-postprocess.php",
+            "@composer dump-autoload --optimize"
+        ],
+        "post-install-cmd": [
+            "@prefix-namespaces"
+        ],
+        "post-update-cmd": [
+            "@prefix-namespaces"
+        ],
+        "post-autoload-dump": [
+            "@strauss-download",
+            "@php ../../../_build/bin/strauss.phar include-autoloader"
+        ]
+    },
+    "extra": {
+        "aws/aws-sdk-php": [
+            "S3"
+        ],
+        "strauss": {
+            "target_directory": "vendor-prefixed",
+            "namespace_prefix": "Sterc\\MediaManager\\Vendor\\",
+            "classmap_prefix": "Sterc_MediaManager_Vendor_",
+            "constant_prefix": "STERC_MM_VENDOR_",
+            "delete_vendor_packages": true
         }
     }
 }

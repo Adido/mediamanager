@@ -48,14 +48,34 @@ class cbMediaManagerImageInput extends cbBaseInput
     {
         if (!isset($data['width']) || $data['width'] < 1) {
             $size = false;
+            $file = null;
 
-            if (file_exists($data['url']) && is_readable($data['url'])) {
-                $size = getimagesize($data['url']);
+            // Use the stored dimensions, which also covers files on S3
+            if (!empty($data['file_id']) && ($file = $this->modx->getObject('MediamanagerFiles', (int) $data['file_id']))) {
+                $dimensions = explode('x', (string) $file->get('file_dimensions'));
+                if (count($dimensions) === 2 && (int) $dimensions[0] > 0) {
+                    $size = [(int) $dimensions[0], (int) $dimensions[1]];
+                }
+            }
+
+            // Remote files, such as on S3, without stored dimensions get a fixed size, rather than a request each time
+            if (!$size && $file) {
+                $mediaManager = $this->modx->getService('mediamanager', 'MediaManager', $this->modx->getOption('mediamanager.core_path', null, $this->modx->getOption('core_path') . 'components/mediamanager/') . 'model/mediamanager/');
+                $storage      = $mediaManager ? $mediaManager->sources->getStorage($file->get('media_sources_id')) : null;
+
+                if ($storage && $storage->isRemote()) {
+                    $size = [400, 400];
+                }
+            }
+
+            $url = isset($data['url']) ? (string) $data['url'] : '';
+            if (!$size && file_exists($url) && is_readable($url)) {
+                $size = getimagesize($url);
             }
 
             if (!$size) {
                 // Try it with a normalised path
-                $normalisedPath = str_replace(MODX_BASE_URL.MODX_BASE_URL, MODX_BASE_URL, MODX_BASE_PATH . $data['url']);
+                $normalisedPath = str_replace(MODX_BASE_URL.MODX_BASE_URL, MODX_BASE_URL, MODX_BASE_PATH . $url);
                 if (file_exists($normalisedPath) && is_readable($normalisedPath)) {
                     $size = getimagesize($normalisedPath);
                 }

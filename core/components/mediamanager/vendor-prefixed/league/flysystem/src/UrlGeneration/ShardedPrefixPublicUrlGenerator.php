@@ -1,0 +1,39 @@
+<?php
+
+namespace Sterc\MediaManager\Vendor\League\Flysystem\UrlGeneration;
+
+use InvalidArgumentException;
+use Sterc\MediaManager\Vendor\League\Flysystem\Config;
+use Sterc\MediaManager\Vendor\League\Flysystem\PathPrefixer;
+
+use function array_map;
+use function count;
+use function crc32;
+
+final class ShardedPrefixPublicUrlGenerator implements PublicUrlGenerator
+{
+    /** @var PathPrefixer[] */
+    private array $prefixes;
+    private int $count;
+
+    /**
+     * @param string[] $prefixes
+     */
+    public function __construct(array $prefixes)
+    {
+        $this->count = count($prefixes);
+
+        if ($this->count === 0) {
+            throw new InvalidArgumentException('At least one prefix is required.');
+        }
+
+        $this->prefixes = array_map(static fn (string $prefix) => new PathPrefixer($prefix, '/'), $prefixes);
+    }
+
+    public function publicUrl(string $path, Config $config): string
+    {
+        $index = abs(crc32($path)) % $this->count;
+
+        return $this->prefixes[$index]->prefixPath($path);
+    }
+}

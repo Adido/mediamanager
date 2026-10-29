@@ -64,6 +64,14 @@
             "key": "max_file_size_images",
             "value": 5,
             "area": "files"
+        }, {
+            "key": "cache_path",
+            "value": "",
+            "area": "files"
+        }, {
+            "key": "cache_url",
+            "value": "",
+            "area": "files"
         }]
     },
     "database": {
@@ -87,13 +95,8 @@
             "after": [
                 "resolve.policies.php",
                 "resolve.synctables.php",
-                "resolve.categoriesdefaultmediasource.php",
-                "setupoptions.resolver.php",
-                "stercextra.resolver.php"
+                "resolve.categoriesdefaultmediasource.php"
             ]
-        },
-        "setupOptions":{
-            "source": "setup.options.php"
         }
     }
 }

@@ -55,7 +55,9 @@ switch ($modx->event->name) {
                         }
                     }
 
-                    $doc->loadHTML($html);
+                    if ($html !== '') {
+                        $doc->loadHTML($html);
+                    }
 
                     foreach ($doc->getElementsByTagName('img') as $tag) {
                         $file = $modx->getObject('MediamanagerFiles', [
@@ -81,7 +83,7 @@ switch ($modx->event->name) {
 
             if ($contentblocks instanceof ContentBlocks) {
                 if (isset($properties['contentblocks']['_isContentBlocks']) && (int) $properties['contentblocks']['_isContentBlocks'] === 1) {
-                    $layout = json_decode($properties['contentblocks']['content'], true);
+                    $layout = json_decode(isset($properties['contentblocks']['content']) ? $properties['contentblocks']['content'] : '', true);
 
                     if ($layout) {
                         foreach ($layout as $layoutValue) {

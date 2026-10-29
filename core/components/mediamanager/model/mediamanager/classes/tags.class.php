@@ -11,7 +11,7 @@ class MediaManagerTagsHelper
 
     public function createTag($name)
     {
-        $name = trim($name);
+        $name = trim((string) $name);
 
         if (empty($name)) {
             return [
@@ -92,9 +92,9 @@ class MediaManagerTagsHelper
         $groupedTags = [];
 
         foreach ($tags as $tag) {
-            $name = strtolower($tag->get('name'));
+            $name = strtolower((string) $tag->get('name'));
 
-            if (in_array($name[0], $range)) {
+            if ($name !== '' && in_array($name[0], $range)) {
                 $groupedTags[$name[0]][] = $tag->toArray();
             }
             else {

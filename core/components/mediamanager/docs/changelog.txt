@@ -1,5 +1,21 @@
 Changelog for MediaManager.
 
+MediaManager (unreleased, -adido)
+====================================
+- Requires PHP 8.1 or later, for every site. Older PHP versions are no longer supported.
+- Add support for S3 media sources (sources.modS3MediaSource), through Flysystem and the AWS SDK, bundled with prefixed namespaces
+- Add system settings mediamanager.cache_path and mediamanager.cache_url for the thumbnail cache of S3 sources
+- Add media source property mediamanagerS3ObjectAclEnabled, to disable ACLs on S3 sources whose bucket doesn't support them
+- Thumbnails are created when a file is uploaded, cropped or copied, instead of when first viewed
+- Thumbnails are created from the file's id, instead of a path, which closes a path traversal issue in the thumbnail processor
+- Delete a PDF's preview when the file is deleted
+- Copy to source now registers the copy against the source it was copied to
+- Fix file URLs of media sources with an empty or "/" base URL
+- Fix file versions not being created when renaming a file uploaded in an earlier month
+- Fix the TV input preview when typing a file id
+- ContentBlocks image inputs use the dimensions stored for a file. S3 files without stored dimensions use 400x400
+- New TV input placeholder {$url}, with the file's URL. {$path} is unchanged for local files, and is the file's URL for S3 files
+
 MediaManager 0.3.3
 ====================================
 - Add custom plugin events:

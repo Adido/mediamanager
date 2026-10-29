@@ -8,3 +8,8 @@ config.core.php
 # Only allow compressed build package
 _packages/*
 !_packages/*.zip
+
+# Strauss phar is downloaded by composer scripts
+_build/bin/strauss.phar
+core/components/mediamanager/vendor/bin/
+core/components/mediamanager/vendor/composer/autoload_aliases.php

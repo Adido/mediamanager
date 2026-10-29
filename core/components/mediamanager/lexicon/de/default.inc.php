@@ -213,6 +213,10 @@ $_lang['setting_mediamanager.max_file_size']                                = 'M
 $_lang['setting_mediamanager.max_file_size_desc']                           = 'Maximale Dateigröße in MB.';
 $_lang['setting_mediamanager.max_file_size_images']                         = 'Maximale Dateigröße für Bilder';
 $_lang['setting_mediamanager.max_file_size_images_desc']                    = 'Maximale Dateigröße für Bilder in MB.';
+$_lang['setting_mediamanager.cache_path']                                   = 'Cache path';
+$_lang['setting_mediamanager.cache_path_desc']                              = 'Absolute path for thumbnails, PDF previews and download zips of media sources that are not on the local file system, such as S3. Each source gets its own sources/{id}/ subfolder. Leave empty to use {assets_path}mediamanager/.';
+$_lang['setting_mediamanager.cache_url']                                    = 'Cache URL';
+$_lang['setting_mediamanager.cache_url_desc']                               = 'URL of the cache path. Leave empty to use {assets_url}mediamanager/.';
 
 /* License email. */
 $_lang['mediamanager.license.email.image_source_validity.subject']          = 'Hinweis zur Gültigkeit der Bildquelle für Medienquelle "[[+mediasource]]" - [[+name]]';

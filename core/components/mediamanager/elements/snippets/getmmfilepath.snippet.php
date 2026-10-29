@@ -11,6 +11,13 @@ if (!is_numeric($input)) {
 $path = '';
 if ($file = $modx->getObject('MediamanagerFiles', $input)) {
     $mediaSourceId  = $file->get('media_sources_id');
+    $storage        = $mediaManager->sources->getStorage($mediaSourceId);
+
+    /* Files on remote storage, such as S3, return their URL. */
+    if ($storage && $storage->isRemote()) {
+        return $storage->url($file->get('path'));
+    }
+
     $mediaSource    = $modx->getObject('sources.modFileMediaSource', ['id' => $mediaSourceId]);
     $basePath       = $mediaSource->getProperties()['basePath']['value'];
     $isRelative     = $mediaSource->getProperties()['baseUrlRelative']['value'];

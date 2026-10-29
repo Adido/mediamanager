@@ -41,12 +41,19 @@ class MediaManagerPhpThumbProcessor extends modProcessor
             $file = $this->modx->getObject('MediamanagerFiles', $src);
 
             if ($file) {
-                $src  = $file->get('path');
-                $this->setProperty('source', $file->get('media_sources_id'));
+                $mediaManager = $this->modx->getService('mediamanager', 'MediaManager', $this->modx->getOption('mediamanager.core_path', null, $this->modx->getOption('core_path') . 'components/mediamanager/') . 'model/mediamanager/');
+                $storage      = $mediaManager->sources->getStorage($file->get('media_sources_id'));
+
+                if (!$storage) {
+                    return $this->failure($this->modx->lexicon('source_err_nf'));
+                }
 
                 if ((int) $this->getProperty('return_url') === 1) {
-                    echo $src; exit;
+                    echo $mediaManager->files->absoluteUrl($storage->url($file->get('path'))); exit;
                 }
+
+                /* Media Manager files are served through their media source's storage. */
+                return $this->outputFile($mediaManager, $storage, $file);
             }
         }
 
@@ -59,18 +66,6 @@ class MediaManagerPhpThumbProcessor extends modProcessor
         $this->getSource($this->getProperty('source'));
         if (empty($this->source)) {
             $this->failure($this->modx->lexicon('source_err_nf'));
-        }
-
-        /* SVG Support. */
-        if ($file && $file->get('file_type') === 'svg') {
-            $path = $this->source->getBasePath() . $file->get('path');
-
-            header('Content-type: image/svg+xml');
-
-            $svgFile = new DOMDocument();
-            $svgFile->load($path);
-            echo $svgFile->saveHTML($svgFile->getElementsByTagName('svg')[0]);
-            exit;
         }
 
         $src = $this->source->prepareSrcForThumb($src);
@@ -97,6 +92,51 @@ class MediaManagerPhpThumbProcessor extends modProcessor
         $this->phpThumb->output();
 
         return '';
+    }
+
+    /**
+     * Output an SVG, or the Media Manager thumbnail of an image.
+     *
+     * @param MediaManager $mediaManager
+     * @param \Sterc\MediaManager\Storage\Storage $storage
+     * @param MediamanagerFiles $file
+     * @return string
+     */
+    protected function outputFile($mediaManager, $storage, $file)
+    {
+        if ($file->get('file_type') === 'svg') {
+            $stream = $storage->readStream($file->get('path'));
+
+            if ($stream === false) {
+                return $this->failure();
+            }
+
+            $svgContent = stream_get_contents($stream);
+            fclose($stream);
+
+            if ($svgContent === false || $svgContent === '') {
+                return $this->failure();
+            }
+
+            header('Content-type: image/svg+xml');
+
+            $svgFile = new DOMDocument();
+            $svgFile->loadXML($svgContent);
+
+            echo $svgFile->saveHTML($svgFile->getElementsByTagName('svg')[0]);
+            exit;
+        }
+
+        $thumbPath = $mediaManager->files->ensureThumbnail($mediaManager->files->fileToArray($file));
+
+        if ($thumbPath === false) {
+            return $this->failure();
+        }
+
+        header('Content-Type: ' . mime_content_type($thumbPath));
+        header('Content-Length: ' . filesize($thumbPath));
+        readfile($thumbPath);
+        exit;
     }
 
     /**

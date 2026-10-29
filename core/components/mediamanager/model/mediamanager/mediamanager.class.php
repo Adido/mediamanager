@@ -34,6 +34,7 @@ class MediaManager
     public $contexts = null;
     public $files = null;
     public $permissions = null;
+    public $sources = null;
     public $tags = null;
 
     /**
@@ -211,6 +212,7 @@ class MediaManager
      */
     public function saveFileContent($fileId, $resourceId, $tvId = 0)
     {
+        $object = null;
         if ((int) $tvId !== 0) {
             $object = $this->modx->getObject('MediamanagerFilesContent', [
                 'mediamanager_files_id' => $fileId,
