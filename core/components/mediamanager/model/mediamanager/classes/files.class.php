@@ -677,14 +677,34 @@ class MediaManagerFilesHelper
     }
 
     /**
+     * Get the absolute local path of a file.
+     *
+     * @param array $file
+     * @param null|array $source Unused, the file's media source is always used. Kept for compatibility.
+     * @param string $type Can be path or archive_path
+     *
+     * @return string Empty when the file has no local path, such as on S3.
+     */
+    public function filePath($file, $source = null, $type = 'path')
+    {
+        $storage = $this->mediaManager->sources->getStorage($file['media_sources_id']);
+        if (!$storage) {
+            return '';
+        }
+
+        return (string) $storage->localPath($file[$type]);
+    }
+
+    /**
      * Get file url.
      *
      * @param array $file
+     * @param null|object $source Unused, the file's media source is always used. Kept for compatibility.
      * @param string $type Can be path or archive_path
      *
      * @return string
      */
-    public function fileUrl($file, $type = 'path')
+    public function fileUrl($file, $source = null, $type = 'path')
     {
         $storage = $this->mediaManager->sources->getStorage($file['media_sources_id']);
         if (!$storage) {
@@ -720,10 +740,11 @@ class MediaManagerFilesHelper
      * Return array from file row
      *
      * @param object $file
+     * @param null|object $source Unused, the file's media source is always used. Kept for compatibility.
      *
      * @return array
      */
-    public function fileToArray(MediamanagerFiles $file = null)
+    public function fileToArray(MediamanagerFiles $file = null, $source = null)
     {
         if ($file === null) {
             return [];
@@ -736,6 +757,10 @@ class MediaManagerFilesHelper
         $file['file_path']   = $file['path'];
         $file['is_archived'] = (int) $file['is_archived'];
         $file['path']        = $this->fileUrl($file);
+
+        // Absolute local path of the source, empty for sources without one, such as S3
+        $storage           = $this->mediaManager->sources->getStorage($file['media_sources_id']);
+        $file['base_path'] = $storage ? (string) $storage->localPath('') : '';
 
         return $file;
     }
@@ -1843,7 +1868,9 @@ class MediaManagerFilesHelper
         $file->set('edited_on',       time());
         $file->set('edited_by',       $this->mediaManager->modx->getUser()->get('id'));
 
-        $this->setUploadPaths($file->get('media_sources_id'));
+        if (!$this->setUploadPaths($file->get('media_sources_id'))) {
+            $this->mediaManager->modx->log(modX::LOG_LEVEL_ERROR, '[MediaManager] Could not restore version ' . $versionId . ' of file ' . $file->get('id') . ': media source ' . $file->get('media_sources_id') . ' is not available to Media Manager.');
+        }
 
         //Get old file and replace current file
         $versionFile = $this->removeSlashes($version->get('path'));
@@ -2513,7 +2540,12 @@ class MediaManagerFilesHelper
             // Save as new file
             return $this->duplicateFile($file, $imageData);
         }
-        $this->createUploadDirectory($file->get('media_sources_id'));
+        if (!$this->createUploadDirectory($file->get('media_sources_id'))) {
+            $response['status']  = self::STATUS_ERROR;
+            $response['message'] = $this->alertMessageHtml($this->mediaManager->modx->lexicon('mediamanager.files.error.create_directory'), 'danger');
+            return $response;
+        }
+
         $fileKey = $this->removeSlashes($file->get('path'));
 
         // Write the cropped image locally first, to read its details
@@ -2966,6 +2998,9 @@ class MediaManagerFilesHelper
             $sourceId = $this->mediaManager->sources->getCurrentSource();
         }
 
+        // Clear the previous source's storage, so a failure here can't leave it in use
+        $this->storage = null;
+
         // Get media source
         $mediaSource = $this->mediaManager->sources->getSource($sourceId);
 
@@ -3027,7 +3062,7 @@ class MediaManagerFilesHelper
      */
     private function createLocalDirectory($directoryPath)
     {
-        return is_dir($directoryPath) || mkdir($directoryPath, 0755, true);
+        return is_dir($directoryPath) || mkdir($directoryPath, 0777, true);
     }
 
     /**

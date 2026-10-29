@@ -18,6 +18,7 @@ if (!class_exists('MediaManagerInputRender')) {
             }
 
             $path    = '';
+            $url     = '';
             $preview = '';
             $file    = $this->modx->getObject('MediamanagerFiles', $value);
             if ($file) {
@@ -25,10 +26,17 @@ if (!class_exists('MediaManagerInputRender')) {
                 $storage      = $mediaManager->sources->getStorage($file->get('media_sources_id'));
 
                 if ($storage) {
-                    $path = $storage->url($file->get('path'));
+                    $url  = $storage->url($file->get('path'));
+                    $path = $url;
+
+                    /* Files that aren't on remote storage keep the path placeholder they have always had: the source's base path and the file path. */
+                    if (!$storage->isRemote() && ($mediaSource = $this->modx->getObject('sources.modMediaSource', $file->get('media_sources_id')))) {
+                        $properties = $mediaSource->getProperties();
+                        $path       = (isset($properties['basePath']['value']) ? $properties['basePath']['value'] : '') . $file->get('path');
+                    }
 
                     if ($file->get('file_type') === 'svg') {
-                        $preview = $path;
+                        $preview = $url;
                     } else {
                         $preview = $mediaManager->files->getThumbnail($mediaManager->files->fileToArray($file), 'url');
                     }
@@ -36,6 +44,7 @@ if (!class_exists('MediaManagerInputRender')) {
             }
 
             $this->setPlaceholder('path', $path);
+            $this->setPlaceholder('url', $url);
             $this->setPlaceholder('preview', $preview);
 
             return $value;

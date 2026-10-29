@@ -39,3 +39,16 @@ foreach ($files as $file) {
 }
 
 echo "strauss-postprocess: prefixed {$changed} interpolated AWS class names\n";
+
+/*
+ * Strauss always writes development aliases, which map the unprefixed Aws\ and
+ * GuzzleHttp\ names onto the prefixed copies. There are no dev dependencies for
+ * them to serve, and if loaded they could clash with another extra's copy of
+ * the SDK, so delete them. vendor/autoload.php only loads the file if it exists.
+ */
+$aliases = getcwd() . '/vendor/composer/autoload_aliases.php';
+
+if (is_file($aliases)) {
+    unlink($aliases);
+    echo "strauss-postprocess: deleted vendor/composer/autoload_aliases.php\n";
+}

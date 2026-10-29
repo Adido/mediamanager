@@ -14,8 +14,8 @@ if (!class_exists('MediaManagerOutputRender')) {
                     $mediaManager = $this->modx->getService('mediamanager', 'MediaManager', $this->modx->getOption('mediamanager.core_path', null, $this->modx->getOption('core_path') . 'components/mediamanager/') . 'model/mediamanager/');
                     $storage      = $mediaManager->sources->getStorage($source->get('id'));
 
-                    /* Files without a local path, such as on S3, use the storage URL, not the outdated MODX 2 S3 source. */
-                    if ($storage && $storage->localPath($image->get('path')) === null) {
+                    /* Files on remote storage, such as S3, use the storage URL. */
+                    if ($storage && $storage->isRemote()) {
                         return $storage->url($image->get('path'));
                     }
 

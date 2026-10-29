@@ -165,12 +165,23 @@ class cbMediaManagerGalleryInput extends cbBaseInput
             // grab image sizes
             if (!isset($img['width']) || $img['width'] < 1) {
                 $size = false;
+                $file = null;
 
                 // Use the stored dimensions, which also covers files on S3
                 if (!empty($img['file_id']) && ($file = $this->modx->getObject('MediamanagerFiles', (int) $img['file_id']))) {
                     $dimensions = explode('x', (string) $file->get('file_dimensions'));
                     if (count($dimensions) === 2 && (int) $dimensions[0] > 0) {
                         $size = [(int) $dimensions[0], (int) $dimensions[1]];
+                    }
+                }
+
+                // Remote files, such as on S3, without stored dimensions get a fixed size, rather than a request each time
+                if (!$size && $file) {
+                    $mediaManager = $this->modx->getService('mediamanager', 'MediaManager', $this->modx->getOption('mediamanager.core_path', null, $this->modx->getOption('core_path') . 'components/mediamanager/') . 'model/mediamanager/');
+                    $storage      = $mediaManager ? $mediaManager->sources->getStorage($file->get('media_sources_id')) : null;
+
+                    if ($storage && $storage->isRemote()) {
+                        $size = [400, 400];
                     }
                 }
 

@@ -6,6 +6,7 @@ use modX;
 use Sterc\MediaManager\Vendor\League\Flysystem\Filesystem;
 use Sterc\MediaManager\Vendor\League\Flysystem\FilesystemException;
 use Sterc\MediaManager\Vendor\League\Flysystem\Local\LocalFilesystemAdapter;
+use Sterc\MediaManager\Vendor\League\Flysystem\UnixVisibility\PortableVisibilityConverter;
 use Sterc\MediaManager\Vendor\League\Flysystem\Visibility;
 
 /**
@@ -46,21 +47,35 @@ class LocalStorage extends Storage
     {
         $basePath = isset($properties['basePath']) ? (string) $properties['basePath'] : '';
         if (!isset($properties['basePathRelative']) || $properties['basePathRelative'] !== false) {
-            $basePath = rtrim(MODX_BASE_PATH, '/') . '/' . trim($basePath, '/') . '/';
+            $basePath = rtrim(rtrim(MODX_BASE_PATH, '/') . '/' . trim($basePath, '/'), '/') . '/';
         } else {
             $basePath = rtrim($basePath, '/') . '/';
         }
 
-        /* Matches the file and upload URLs Media Manager has always used. */
+        /*
+         * Root-relative URLs, as Media Manager has always used. A source at the
+         * web root, with an empty or "/" base URL, gets "/" rather than "//",
+         * which browsers would read as a protocol-relative host.
+         */
         $baseUrl     = isset($properties['baseUrl']) ? (string) $properties['baseUrl'] : '';
         $relativeUrl = !isset($properties['baseUrlRelative']) || $properties['baseUrlRelative'] !== false;
 
-        $fileUrl  = $relativeUrl ? '/' . trim($baseUrl, '/') . '/' : $baseUrl;
-        $cacheUrl = $relativeUrl ? rtrim($modx->getOption('site_url'), '/') . '/' . trim($baseUrl, '/') . '/' : $baseUrl;
+        if ($relativeUrl) {
+            $fileUrl = trim($baseUrl, '/') === '' ? '/' : '/' . trim($baseUrl, '/') . '/';
+        } else {
+            $fileUrl = rtrim($baseUrl, '/') . '/';
+        }
 
-        $filesystem = new Filesystem(new LocalFilesystemAdapter($basePath));
+        /* Folders are created as Media Manager has always created them. */
+        $visibility = PortableVisibilityConverter::fromArray([
+            'file' => ['public' => 0644, 'private' => 0600],
+            'dir'  => ['public' => 0777, 'private' => 0700]
+        ], Visibility::PUBLIC);
 
-        return new static($modx, $filesystem, $fileUrl, $basePath, $cacheUrl, $basePath);
+        $filesystem = new Filesystem(new LocalFilesystemAdapter($basePath, $visibility));
+
+        /* Caches sit beside the files, so they share their URL. */
+        return new static($modx, $filesystem, $fileUrl, $basePath, $fileUrl, $basePath);
     }
 
     /**
@@ -71,6 +86,14 @@ class LocalStorage extends Storage
     public function privateUrl($key, $lifetime = 3600)
     {
         return $this->url($key);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function isRemote()
+    {
+        return false;
     }
 
     /**

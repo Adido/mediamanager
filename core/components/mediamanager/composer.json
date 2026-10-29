@@ -16,7 +16,10 @@
         }
     },
     "scripts": {
-        "strauss-download": "sh -c 'test -f ../../../_build/bin/strauss.phar || (mkdir -p ../../../_build/bin && curl -fsSL -o ../../../_build/bin/strauss.phar https://github.com/BrianHenryIE/strauss/releases/download/0.31.1/strauss.phar)'",
+        "strauss-download": [
+            "sh -c 'test -f ../../../_build/bin/strauss.phar || (mkdir -p ../../../_build/bin && curl -fsSL -o ../../../_build/bin/strauss.phar https://github.com/BrianHenryIE/strauss/releases/download/0.31.1/strauss.phar)'",
+            "@php ../../../_build/strauss-verify.php"
+        ],
         "prefix-namespaces": [
             "Aws\\Script\\Composer\\Composer::removeUnusedServices",
             "@strauss-download",

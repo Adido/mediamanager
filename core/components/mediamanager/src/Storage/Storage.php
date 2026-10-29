@@ -86,6 +86,14 @@ abstract class Storage
     abstract public function localPath($key);
 
     /**
+     * Whether files are stored remotely, such as on S3, so reading one means
+     * a request to another service, and there is no local path for it.
+     *
+     * @return bool
+     */
+    abstract public function isRemote();
+
+    /**
      * Absolute path of a local file holding the stored file's contents.
      * Release it with releaseLocalCopy() when done.
      *
