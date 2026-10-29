@@ -2,9 +2,9 @@
   'root' => 
   array (
     'name' => 'sterc/mediamanager',
-    'pretty_version' => 'dev-s3-support',
-    'version' => 'dev-s3-support',
-    'reference' => '8d8c5041be767daa1f1e573e5b3fa7774f667b97',
+    'pretty_version' => '2.x-dev',
+    'version' => '2.9999999.9999999.9999999-dev',
+    'reference' => '755b2f6aaf4d11ce1241b8abcf5d17e971c7dc9d',
     'type' => 'library',
     'install_path' => __DIR__ . '/../',
     'aliases' => 
