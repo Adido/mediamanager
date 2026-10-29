@@ -214,6 +214,19 @@ class MediaManagerFilesHelper
         $bodyData['file']         = $file;
         $footerData['file']       = $file;
 
+        // The cropper reads the image back from a canvas, so remote images must come from this origin
+        $bodyData['crop_path'] = $file['path'];
+        $storage               = $this->mediaManager->sources->getStorage($file['media_sources_id']);
+        if ($template === 'crop' && $storage && $storage->isRemote()) {
+            $bodyData['crop_path'] = $this->mediaManager->config['connector_url'] . '?' . http_build_query([
+                'action'       => 'mgr/image',
+                'HTTP_MODAUTH' => $this->mediaManager->modx->user->getUserToken(
+                    $this->mediaManager->modx->context->get('key')
+                ),
+                'id'           => $file['id']
+            ]);
+        }
+
         // Set file type
         if ($this->isImage($file['file_type'])) {
             $bodyData['preview']  = sprintf('<img src="%s" />', $this->getThumbnail($file, 'url'));
