@@ -2273,7 +2273,11 @@ class MediaManagerFilesHelper
                     $parser        = $this->mediaManager->modx->getService('modParser');
                     $corePath      = $this->mediaManager->modx->getOption('contentblocks.core_path', null, MODX_CORE_PATH . 'components/contentblocks/');
                     $contentBlocks = $this->mediaManager->modx->getService('contentblocks', 'ContentBlocks', $corePath . 'model/contentblocks/');
-                    $content       = json_decode($properties['content'], true);
+                    $content       = json_decode(isset($properties['content']) ? (string) $properties['content'] : '', true);
+
+                    if (!is_array($content)) {
+                        continue;
+                    }
 
                     foreach ($content as &$layout) {
                         foreach ($layout['content'] as &$value) {

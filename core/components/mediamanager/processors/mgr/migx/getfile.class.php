@@ -111,11 +111,17 @@ class MediaManagerPhpThumbProcessor extends modProcessor
                 return $this->failure();
             }
 
+            $svgContent = stream_get_contents($stream);
+            fclose($stream);
+
+            if ($svgContent === false || $svgContent === '') {
+                return $this->failure();
+            }
+
             header('Content-type: image/svg+xml');
 
             $svgFile = new DOMDocument();
-            $svgFile->loadXML(stream_get_contents($stream));
-            fclose($stream);
+            $svgFile->loadXML($svgContent);
 
             echo $svgFile->saveHTML($svgFile->getElementsByTagName('svg')[0]);
             exit;

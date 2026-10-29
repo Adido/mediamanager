@@ -55,7 +55,9 @@ switch ($modx->event->name) {
                         }
                     }
 
-                    $doc->loadHTML($html);
+                    if ($html !== '') {
+                        $doc->loadHTML($html);
+                    }
 
                     foreach ($doc->getElementsByTagName('img') as $tag) {
                         $file = $modx->getObject('MediamanagerFiles', [
